@@ -8,14 +8,14 @@
   <link href="https://fonts.googleapis.com/css2?family=Lateef:wght@400;700&family=Noto+Naskh+Arabic:wght@400;700&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg:        #0d1117;
-      --surface:   #161b22;
-      --border:    #2a3040;
+      --bg:        #f5f1e8;
+      --surface:   #faf7f0;
+      --border:    #e8dcc8;
       --gold:      #c9a84c;
       --gold-dim:  #7a6030;
       --gold-glow: rgba(201,168,76,0.15);
-      --text:      #e8dfc8;
-      --text-dim:  #8b7d60;
+      --text:      #2a2520;
+      --text-dim:  #6b5d47;
       --green:     #1a6b4a;
       --green-light: #2ecc8a;
       --radius:    12px;
@@ -37,13 +37,13 @@
       position: fixed;
       inset: 0;
       background-image:
-        radial-gradient(1px 1px at 10% 20%, rgba(201,168,76,0.4) 0%, transparent 100%),
-        radial-gradient(1px 1px at 80% 10%, rgba(201,168,76,0.3) 0%, transparent 100%),
-        radial-gradient(1px 1px at 30% 70%, rgba(201,168,76,0.2) 0%, transparent 100%),
-        radial-gradient(1px 1px at 90% 80%, rgba(201,168,76,0.3) 0%, transparent 100%),
-        radial-gradient(1px 1px at 50% 50%, rgba(201,168,76,0.15) 0%, transparent 100%),
-        radial-gradient(1px 1px at 70% 40%, rgba(201,168,76,0.2) 0%, transparent 100%),
-        radial-gradient(1px 1px at 20% 90%, rgba(201,168,76,0.25) 0%, transparent 100%);
+        radial-gradient(1px 1px at 10% 20%, rgba(201,168,76,0.08) 0%, transparent 100%),
+        radial-gradient(1px 1px at 80% 10%, rgba(201,168,76,0.06) 0%, transparent 100%),
+        radial-gradient(1px 1px at 30% 70%, rgba(201,168,76,0.05) 0%, transparent 100%),
+        radial-gradient(1px 1px at 90% 80%, rgba(201,168,76,0.06) 0%, transparent 100%),
+        radial-gradient(1px 1px at 50% 50%, rgba(201,168,76,0.03) 0%, transparent 100%),
+        radial-gradient(1px 1px at 70% 40%, rgba(201,168,76,0.04) 0%, transparent 100%),
+        radial-gradient(1px 1px at 20% 90%, rgba(201,168,76,0.05) 0%, transparent 100%);
       pointer-events: none;
       z-index: 0;
     }
@@ -237,7 +237,7 @@
     /* ── Tooltip ── */
     .tooltip {
       position: fixed;
-      background: #1e2530;
+      background: #faf7f0;
       border: 1px solid var(--border);
       border-radius: 6px;
       padding: 6px 10px;
@@ -250,6 +250,7 @@
       transition: opacity 0.15s;
       white-space: nowrap;
       direction: ltr;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
     }
 
     .tooltip.visible { opacity: 1; }
@@ -439,7 +440,12 @@
   <!-- Controls -->
   <div class="controls">
     <label>PAGE</label>
-    <select id="page-select"></select>
+    <select id="page-select">
+      <option value="1">001</option>
+    </select>
+    <button id="prevBtn" onclick="goPage(currentPage - 1)" style="padding: 6px 12px; background: #7a6030; color: #c9a84c; border: 1px solid #7a6030; border-radius: 6px; cursor: pointer; font-size: 12px;">← PREV</button>
+    <span id="pageDisplay" style="font-family: monospace; color: #c9a84c;">001 / 604</span>
+    <button id="nextBtn" onclick="goPage(currentPage + 1)" style="padding: 6px 12px; background: #7a6030; color: #c9a84c; border: 1px solid #7a6030; border-radius: 6px; cursor: pointer; font-size: 12px;">NEXT →</button>
   </div>
 
   <!-- Mushaf card -->
@@ -529,6 +535,7 @@
   const CDN_DATA  = "https://raw.githubusercontent.com/MohamadHajjRabee/quran-qcf4/main";
   const loadedFonts = new Set();
   let currentPageData = null;
+  let currentPage = 1;
 
   // Populate page select (1–604)
   const sel = document.getElementById("page-select");
@@ -540,6 +547,17 @@
   }
 
   sel.addEventListener("change", () => loadPage(parseInt(sel.value)));
+
+  function goPage(num) {
+    if (num >= 1 && num <= 604) {
+      currentPage = num;
+      document.getElementById("page-select").value = num;
+      document.getElementById("prevBtn").disabled = num === 1;
+      document.getElementById("nextBtn").disabled = num === 604;
+      document.getElementById("pageDisplay").textContent = `${String(num).padStart(3, "0")} / 604`;
+      loadPage(num);
+    }
+  }
 
   async function loadFont(fontName) {
     if (loadedFonts.has(fontName)) return;

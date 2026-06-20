@@ -5,21 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>المصحف الشريف - 604 صفحة</title>
     <style>
-        @font-face {
-            font-family: 'QCF4_Hafs';
-            src: url('./fonts-woff2/QCF4_Hafs_05_W.woff2') format('woff2');
-            font-weight: normal;
-            font-style: normal;
-            font-display: swap;
-        }
-
         * { margin: 0; padding: 0; box-sizing: border-box; }
+        
         html, body { 
             height: 100%; 
             font-family: 'QCF4_Hafs', 'Traditional Arabic', serif;
             direction: rtl; 
             background: #c0c0c0;
         }
+        
         body { 
             display: flex;
             flex-direction: column;
@@ -49,6 +43,7 @@
             padding: 12px 20px;
             background: #d0d0d0;
             border-bottom: 1px solid #999;
+            flex-wrap: wrap;
         }
 
         .nav-btn {
@@ -110,52 +105,6 @@
             position: relative;
         }
 
-        @media (max-width: 768px) {
-            .page-wrapper {
-                width: 98%;
-                padding: 8px;
-            }
-            
-            .page {
-                padding: 25px 15px;
-                min-height: auto;
-            }
-            
-            .line {
-                font-size: 28px;
-                line-height: 3.4;
-                margin-bottom: 6px;
-            }
-            
-            .page-header {
-                margin-bottom: 15px;
-                padding-bottom: 10px;
-            }
-            
-            .page-footer {
-                font-size: 11px;
-                padding: 0 15px;
-                bottom: 15px;
-            }
-            
-            .verse-num {
-                width: 26px;
-                height: 26px;
-                font-size: 9px;
-            }
-        }
-        
-        @media (max-width: 480px) {
-            .line {
-                font-size: 26px;
-                line-height: 3.2;
-            }
-            
-            .page {
-                padding: 20px 12px;
-            }
-        }
-
         .page {
             background: #f5f1e8;
             position: relative;
@@ -163,10 +112,9 @@
             border: 8px solid #1a5f8f;
             border-image: linear-gradient(135deg, #1a5f8f 0%, #2a7fbf 50%, #1a5f8f 100%) 1;
             box-shadow: inset 0 0 0 2px #e8a652, inset 0 0 0 4px #1a5f8f;
-            min-height: 1500px;
+            min-height: auto;
         }
 
-        /* Bordure ornementale */
         .page::before {
             content: '';
             position: absolute;
@@ -300,13 +248,51 @@
             font-family: Arial, sans-serif;
         }
 
-        @media (max-width: 1024px) {
-            .page {
-                padding: 40px 30px;
+        @media (max-width: 768px) {
+            .page-wrapper {
+                width: 98%;
+                padding: 8px;
             }
-            .line { font-size: 26px; line-height: 3.2; }
-            .page-footer { font-size: 12px; padding: 0 30px; }
+            
+            .page {
+                padding: 25px 15px;
+            }
+            
+            .line {
+                font-size: 28px;
+                line-height: 3.4;
+                gap: 2px;
+            }
+            
+            .page-header {
+                margin-bottom: 15px;
+                padding-bottom: 10px;
+            }
+            
+            .page-footer {
+                font-size: 11px;
+                padding: 0 15px;
+                bottom: 15px;
+            }
+            
+            .verse-num {
+                width: 26px;
+                height: 26px;
+                font-size: 9px;
+            }
+            
             .nav-buttons { flex-direction: column; }
+        }
+        
+        @media (max-width: 480px) {
+            .line {
+                font-size: 26px;
+                line-height: 3.2;
+            }
+            
+            .page {
+                padding: 20px 12px;
+            }
         }
 
         .content::-webkit-scrollbar { width: 10px; }
@@ -320,7 +306,7 @@
 <div class="header">
     <div class="header-left">
         <span class="menu-icon">☰</span>
-        <span class="header-title">المصحف الشريف</span>
+        <span class="header-title">المصحف الشريف - 604 صفحة</span>
     </div>
     <div class="nav-icons">
         <span>⚙️</span>
@@ -331,7 +317,7 @@
     <button class="nav-btn" id="prevBtn" onclick="goPage(currentPage - 1)">← السابقة</button>
     <div class="page-selector">
         <input type="number" id="pageInput" class="page-input" min="1" max="604" placeholder="ص" onkeypress="if(event.key==='Enter') goPage(parseInt(this.value))">
-        <div class="page-info" id="pageInfo">ص 6</div>
+        <div class="page-info" id="pageInfo">ص 1</div>
     </div>
     <button class="nav-btn" id="nextBtn" onclick="goPage(currentPage + 1)">التالية →</button>
 </div>
@@ -344,104 +330,181 @@
 </div>
 
 <script>
-    let currentPage = 6;
-    let pageData = null;
+    let currentPage = 1;
+    let pageDataCache = {};
+    let fontMap = {};
 
-    async function loadAndRender() {
+    // Charger font-map.json pour savoir quelle font utiliser pour chaque page
+    async function loadFontMap() {
         try {
-            console.log('📖 تحميل الصفحة 6...');
-            
-            // Vérifier si les fonts sont chargées
-            if (document.fonts) {
-                try {
-                    await document.fonts.load('34px QCF4_Hafs');
-                    console.log('✅ Font QCF4_Hafs chargée');
-                } catch (e) {
-                    console.warn('⚠️ Font QCF4_Hafs non disponible, utilisation du fallback');
+            const response = await fetch('./font-map.json');
+            if (response.ok) {
+                fontMap = await response.json();
+                console.log('✅ Font map chargé');
+            } else {
+                console.warn('⚠️ font-map.json non trouvé, utilisation de fonts par défaut');
+                // Créer une map par défaut (pages 1-10 = font 01, pages 11-20 = font 02, etc.)
+                for (let i = 1; i <= 604; i++) {
+                    const fontNum = Math.ceil(i / 13); // ~13 pages par font
+                    fontMap[i] = `QCF4_Hafs_${String(fontNum).padStart(2, '0')}`;
                 }
             }
+        } catch (error) {
+            console.error('Erreur chargement font-map:', error);
+        }
+    }
+
+    // Charger une page JSON dynamiquement
+    async function loadPage(pageNum) {
+        // Vérifier le cache
+        if (pageDataCache[pageNum]) {
+            return pageDataCache[pageNum];
+        }
+
+        try {
+            const paddedNum = String(pageNum).padStart(3, '0');
+            const response = await fetch(`./pages/${paddedNum}.json`);
             
-            const response = await fetch('./006.json');
-            if (!response.ok) throw new Error('خطأ تحميل 006.json');
+            if (!response.ok) {
+                throw new Error(`Page ${pageNum} non trouvée (${response.status})`);
+            }
             
-            pageData = await response.json();
-            console.log('✅ تم التحميل');
-            renderPage();
+            const data = await response.json();
+            pageDataCache[pageNum] = data;
+            return data;
+        } catch (error) {
+            console.error(`Erreur chargement page ${pageNum}:`, error);
+            throw error;
+        }
+    }
+
+    // Charger et afficher une page
+    async function renderPage(pageNum) {
+        try {
+            const pageData = await loadPage(pageNum);
+            const fontName = fontMap[pageNum] || `QCF4_Hafs_${String(Math.ceil(pageNum / 13)).padStart(2, '0')}`;
+            
+            let html = '<div class="page-wrapper"><div class="page"><div class="page-content">';
+            
+            // Header avec noms de Surah
+            if (pageData.surahs && pageData.surahs.length > 0) {
+                const surah = pageData.surahs[0];
+                html += `
+                    <div class="page-header">
+                        <div class="surah-name-right">سورة ${surah.name_arabic}</div>
+                        <div class="surah-name-left">${surah.name_arabic}</div>
+                    </div>
+                `;
+            }
+            
+            // Charger les fonts dynamiquement
+            const fonts = new Set();
+            fonts.add(fontName);
+            if (pageData.lines) {
+                pageData.lines.forEach(line => {
+                    if (line.words) {
+                        line.words.forEach(word => {
+                            if (word.font) fonts.add(word.font);
+                        });
+                    }
+                });
+            }
+            
+            // Ajouter @font-face pour chaque font
+            let fontFaces = '<style>';
+            fonts.forEach(font => {
+                fontFaces += `
+                    @font-face {
+                        font-family: '${font}';
+                        src: url('./fonts-woff2/${font}_W.woff2') format('woff2');
+                        font-display: swap;
+                    }
+                `;
+            });
+            fontFaces += '</style>';
+            
+            // Ajouter au début de la page
+            if (!document.getElementById('dynamic-fonts')) {
+                const style = document.createElement('style');
+                style.id = 'dynamic-fonts';
+                style.innerHTML = fontFaces;
+                document.head.appendChild(style);
+            }
+            
+            // Rendre les lignes
+            let lastVerseKey = null;
+            if (pageData.lines) {
+                pageData.lines.forEach(lineData => {
+                    html += '<div class="line">';
+                    
+                    if (lineData.words) {
+                        lineData.words.forEach(word => {
+                            // Ignorer les marqueurs "V{number}"
+                            if (/^V\d+$/.test(word.text?.trim())) {
+                                return;
+                            }
+                            
+                            // Ajouter numéro de verset
+                            if (word.verse_key && word.verse_key !== lastVerseKey && word.type === 'word') {
+                                const verseNum = word.verse_key.split(':')[1];
+                                html += `<span class="verse-num">${verseNum}</span>`;
+                                lastVerseKey = word.verse_key;
+                            }
+                            
+                            // Ignorer les en-têtes de surah et autres marqueurs spéciaux
+                            if (word.type === 'surah_header' || word.type === 'quarter') {
+                                return;
+                            }
+                            
+                            // Rendre le mot
+                            const wordFont = word.font || fontName;
+                            const charCode = word.code ? String.fromCharCode(word.code) : word.char || word.text;
+                            html += `<span class="word" style="font-family: '${wordFont}';">${charCode}</span>`;
+                        });
+                    }
+                    
+                    html += '</div>';
+                });
+            }
+            
+            html += '</div>';
+            
+            // Footer
+            if (pageData.surahs && pageData.surahs.length > 0) {
+                const surah = pageData.surahs[0];
+                html += `
+                    <div class="page-footer">
+                        <div class="footer-item">سورة ${surah.name_arabic}</div>
+                        <div class="page-number-center">${pageNum}</div>
+                        <div class="footer-item">جزء ${Math.ceil(pageNum / 20)}</div>
+                    </div>
+                `;
+            }
+            
+            html += '</div></div>';
+            
+            document.getElementById('content').innerHTML = html;
+            updateUI();
+            
         } catch (error) {
             document.getElementById('content').innerHTML = `
                 <div class="error">
                     <strong>❌ خطأ</strong><br>
                     ${error.message}<br><br>
-                    <small>⚠️ Assure-toi que:<br>
-                    1. Le fichier 006.json est dans le MÊME DOSSIER que MUSHAF_FINAL.html<br>
-                    2. Le dossier "fonts-woff2" est dans le MÊME DOSSIER que MUSHAF_FINAL.html<br>
-                    Structure correcte:<br>
+                    <small>⚠️ تأكد من:<br>
+                    1. مجلد pages/ موجود مع ملفات JSON<br>
+                    2. مجلد fonts-woff2/ موجود مع ملفات الخطوط<br>
+                    3. هيكل المجلد صحيح:<br>
                     📁 quran-qcf4-main/<br>
-                    ├─ MUSHAF_FINAL.html<br>
-                    ├─ 006.json<br>
-                    └─ 📁 fonts-woff2/ (contient QCF4_Hafs_05_W.woff2, etc.)
+                    ├─ MUSHAF_604.html<br>
+                    ├─ font-map.json<br>
+                    ├─ 📁 pages/ (001.json ... 604.json)<br>
+                    └─ 📁 fonts-woff2/ (QCF4_Hafs_*.woff2)
                     </small>
                 </div>
             `;
-            console.error('Error:', error);
+            console.error('Erreur:', error);
         }
-    }
-
-    function renderPage() {
-        if (!pageData) return;
-
-        const pageNum = pageData.page;
-        const surah = pageData.surahs[0];
-        const lines = pageData.lines;
-        
-        let html = '<div class="page-wrapper"><div class="page"><div class="page-content">';
-        
-        // Header with Surah names
-        html += `
-            <div class="page-header">
-                <div class="surah-name-right">سورة ${surah.name_arabic}</div>
-                <div class="surah-name-left">${surah.name_arabic}</div>
-            </div>
-        `;
-        
-        // Lines
-        let lastVerseKey = null;
-        lines.forEach(lineData => {
-            html += '<div class="line">';
-            
-            lineData.words.forEach(word => {
-                // Ignorer les words qui sont "V{number}" (comme V30, V31, etc.)
-                if (/^V\d+$/.test(word.text.trim())) {
-                    return;
-                }
-                
-                if (word.verse_key !== lastVerseKey) {
-                    const verseNum = word.verse_key.split(':')[1];
-                    html += `<span class="verse-num">${verseNum}</span>`;
-                    lastVerseKey = word.verse_key;
-                }
-                
-                html += `<span class="word">${word.text}</span>`;
-            });
-            
-            html += '</div>';
-        });
-        
-        html += '</div>';
-        
-        // Footer
-        html += `
-            <div class="page-footer">
-                <div class="footer-item">سورة ${surah.name_arabic}</div>
-                <div class="page-number-center">${pageNum}</div>
-                <div class="footer-item">جزء ١</div>
-            </div>
-        `;
-        
-        html += '</div></div>';
-        
-        document.getElementById('content').innerHTML = html;
-        updateUI();
     }
 
     function updateUI() {
@@ -451,21 +514,26 @@
         document.getElementById('nextBtn').disabled = currentPage === 604;
     }
 
-    function goPage(page) {
-        if (page >= 1 && page <= 604) {
-            currentPage = page;
-            if (page === 6 && pageData) {
-                renderPage();
-            } else {
-                document.getElementById('content').innerHTML = `
-                    <div class="error">صفحة ${page} - برجاء تحميل الملف المقابل</div>
-                `;
-            }
-            updateUI();
+    function goPage(pageNum) {
+        if (pageNum >= 1 && pageNum <= 604) {
+            currentPage = pageNum;
+            renderPage(currentPage);
         }
     }
 
-    window.addEventListener('load', loadAndRender);
+    // Initialisation
+    async function init() {
+        await loadFontMap();
+        renderPage(currentPage);
+    }
+
+    window.addEventListener('load', init);
+    
+    // Clavier: flèches gauche/droite pour navigation
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowLeft') goPage(currentPage + 1);
+        if (e.key === 'ArrowRight') goPage(currentPage - 1);
+    });
 </script>
 
 </body>

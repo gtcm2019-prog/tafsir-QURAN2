@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>QCF4 Tafsir Interactive</title>
+
+<style>
+body {
+  margin: 0;
+  background: #f4ecd8;
+  font-family: "Noto Naskh Arabic", serif;
+  color: #000;
+}
+
+.controls {
+  position: sticky;
+  top: 0;
+  background: #efe3c2;
+  padding: 10px;
+  text-align: center;
+  border-bottom: 1px solid #d6c6a5;
+}
+
+select {
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid #c8b58f;
+  font-family: monospace;
+}
+
+#page-render {
+  padding: 50px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.mushaf-line {
+  display: flex;
+  direction: rtl;
+  justify-content: center;
+  width: 100%;
+}
+
+.mushaf-word {
+  font-size: 32px;
+  padding: 0 2px;
+  line-height: 2;
+  color: #000;
+  cursor: default;
+  transition: 0.15s;
+}
+
+/* FIX IMPORTANT VISUEL */
+.mushaf-word {
+  font-family: inherit;
+}
+
+/* tafsir underline */
+.has-tafsir {
+  text-decoration: underline;
+  text-decoration-color: #b38b2a;
+  text-decoration-thickness: 2px;
+  cursor: pointer;
+}
+
+.mushaf-word:hover {
+  color: #b38b2a;
+}
+
+.highlight {
+  background: rgba(179,139,42,0.25);
+  border-radius: 4px;
+}
+
+.popup {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #fff7e0;
+  border: 1px solid #c8b58f;
+  padding: 12px 16px;
+  border-radius: 10px;
+  font-family: monospace;
+  display: none;
+  max-width: 80%;
+  white-space: pre-line;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+}
+</style>
+</head>
+
+<body>
+
+<div class="controls">
+  Page:
+  <select id="page-select"></select>
+</div>
+
+<div id="page-render"></div>
+<div id="popup" class="popup"></div>
+
+<script>
+
+const CDN_DATA  = "https://raw.githubusercontent.com/MohamadHajjRabee/quran-qcf4/main";
+const CDN_FONTS = "https://cdn.jsdelivr.net/gh/MohamadHajjRabee/quran-qcf4@main";
+
+const loadedFonts = new Set();
+
+/* FONT SAFE LOAD */
+async function loadFont(fontName) {
+  if (!fontName || loadedFonts.has(fontName)) return;
+
+  const file = fontName === "QCF4_QBSML"
+    ? `${fontName}.woff2`
+    : `${fontName}_W.woff2`;
+
+  const url = `${CDN_FONTS}/fonts-woff2/${file}`;
+
+  try {
+    const ff = new FontFace(fontName, `url(${url})`);
+    await ff.load();
+    document.fonts.add(ff);
+    loadedFonts.add(fontName);
+  } catch (e) {
+    console.log("❌ font missing:", fontName);
+  }
+}
+
+/* POPUP */
+function showPopup(text) {
+  const p = document.getElementById("popup");
+  p.textContent = text;
+  p.style.display = "block";
+  setTimeout(() => p.style.display = "none", 3500);
+}
+
+/* LOAD PAGE */
+async function loadPage(page) {
+  const padded = String(page).padStart(3, "0");
+  const res = await fetch(`${CDN_DATA}/pages/${padded}.json`);
+  const data = await res.json();
+  renderPage(data);
+}
+
+/* RENDER SAFE (FIX CARREAUX) */
+async function renderPage(data) {
+  const container = document.getElementById("page-render");
+  container.innerHTML = "";
+
+  const fonts = new Set();
+  if (data.font) fonts.add(data.font);
+
+  data.lines.forEach(line => {
+    line.words.forEach(w => {
+      if (w.font) fonts.add(w.font);
+    });
+  });
+
+  await Promise.all([...fonts].map(loadFont));
+
+  data.lines.forEach(line => {
+    const row = document.createElement("div");
+    row.className = "mushaf-line";
+
+    line.words.forEach(word => {
+      const span = document.createElement("span");
+      span.className = "mushaf-word";
+
+      /* 🔥 FIX CARREAUX */
+      const text = (word.char && word.char.trim() !== "") ? word.char : " ";
+
+      span.textContent = text;
+
+      /* fallback font */
+      span.style.fontFamily = word.font || "QCF4_Hafs_01_W";
+
+      if (word.text && word.text.trim() !== "") {
+        span.classList.add("has-tafsir");
+
+        span.addEventListener("click", () => {
+
+          document.querySelectorAll(".highlight")
+            .forEach(e => e.classList.remove("highlight"));
+
+          span.classList.add("highlight");
+
+          showPopup(
+`📖 Mot: ${text}
+🧠 Tafsir: ${word.text}`
+          );
+        });
+      }
+
+      row.appendChild(span);
+    });
+
+    container.appendChild(row);
+  });
+}
+
+/* SELECT */
+const sel = document.getElementById("page-select");
+
+for (let i = 1; i <= 604; i++) {
+  const opt = document.createElement("option");
+  opt.value = i;
+  opt.textContent = String(i).padStart(3, "0");
+  sel.appendChild(opt);
+}
+
+sel.addEventListener("change", () => loadPage(sel.value));
+
+loadPage(1);
+
+</script>
+
+</body>
+</html>

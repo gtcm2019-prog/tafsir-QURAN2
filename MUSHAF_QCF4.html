@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>المصحف الشريف - Page 6</title>
+    <style>
+        @font-face {
+            font-family: 'QCF4_Hafs';
+            src: url('./QCF4_Hafs_05_W.woff2') format('woff2');
+            font-weight: normal;
+            font-style: normal;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body { 
+            height: 100%; 
+            font-family: 'QCF4_Hafs', 'Traditional Arabic', serif;
+            direction: rtl; 
+            background: #d9d9d9; 
+        }
+        body { 
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .header {
+            background: #2a2a2a;
+            color: #ccc;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        }
+
+        .header-left { display: flex; gap: 20px; align-items: center; }
+        .header-title { font-size: 18px; letter-spacing: 1px; }
+        .menu-icon { font-size: 24px; cursor: pointer; }
+        .nav-icons { display: flex; gap: 15px; font-size: 20px; cursor: pointer; }
+
+        .nav-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            align-items: center;
+            padding: 15px 20px;
+            background: #d9d9d9;
+            border-bottom: 2px solid #a68a2e;
+        }
+
+        .nav-btn {
+            background: #a68a2e;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+            font-size: 14px;
+        }
+
+        .nav-btn:hover { background: #c4a747; transform: translateY(-2px); }
+        .nav-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+        .page-selector {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .page-input {
+            width: 70px;
+            padding: 10px;
+            border: 2px solid #a68a2e;
+            border-radius: 4px;
+            text-align: center;
+            font-size: 14px;
+        }
+
+        .page-info {
+            background: #a68a2e;
+            color: white;
+            padding: 10px 15px;
+            border-radius: 4px;
+            font-size: 13px;
+            font-weight: bold;
+        }
+
+        .content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 15px 15px;
+            background: #d9d9d9;
+        }
+
+        .page {
+            background: #e8e3d3;
+            margin: 0 auto;
+            max-width: 900px;
+            padding: 35px 30px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            min-height: 1400px;
+            position: relative;
+        }
+
+        .page-header {
+            text-align: center;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #a68a2e;
+        }
+
+        .surah-name {
+            font-size: 28px;
+            color: #6b4423;
+            margin-bottom: 8px;
+            font-family: 'Traditional Arabic', serif;
+        }
+
+        .page-number-header {
+            font-size: 12px;
+            color: #999;
+        }
+
+        .line {
+            line-height: 3.2;
+            font-size: 28px;
+            color: #2a2a2a;
+            text-align: right;
+            word-spacing: 0.05em;
+            margin-bottom: 8px;
+            font-family: 'QCF4_Hafs', serif;
+        }
+
+        .word {
+            display: inline;
+            margin: 0 1px;
+        }
+
+        .verse-num {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 28px;
+            height: 28px;
+            background: linear-gradient(135deg, #c4a747, #a68a2e);
+            color: #fff;
+            border-radius: 3px;
+            font-size: 11px;
+            font-weight: bold;
+            margin: 0 3px;
+            vertical-align: middle;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+            font-family: Arial, sans-serif;
+        }
+
+        .page-footer {
+            position: absolute;
+            bottom: 20px;
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 30px;
+            font-size: 13px;
+            color: #5a5a5a;
+            font-family: 'Traditional Arabic', serif;
+        }
+
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            font-size: 18px;
+            color: #666;
+            gap: 15px;
+        }
+
+        .spinner {
+            border: 4px solid #d9d9d9;
+            border-top-color: #a68a2e;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .error { 
+            color: #c33; 
+            padding: 40px; 
+            text-align: center; 
+            font-size: 16px;
+            font-family: Arial, sans-serif;
+        }
+
+        @media (max-width: 800px) {
+            .page { padding: 25px 15px; margin: 0 5px; }
+            .line { font-size: 24px; line-height: 2.8; }
+            .page-footer { font-size: 12px; padding: 0 15px; }
+            .nav-buttons { flex-direction: column; }
+        }
+
+        .content::-webkit-scrollbar { width: 8px; }
+        .content::-webkit-scrollbar-thumb { background: #a68a2e; border-radius: 4px; }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <div class="header-left">
+        <span class="menu-icon">☰</span>
+        <span class="header-title">القائمة الرئيسية</span>
+    </div>
+    <div class="nav-icons">
+        <span>👥</span>
+        <span>🔗</span>
+        <span>🔍</span>
+    </div>
+</div>
+
+<div class="nav-buttons">
+    <button class="nav-btn" id="prevBtn" onclick="goPage(currentPage - 1)">← الصفحة السابقة</button>
+    <div class="page-selector">
+        <input type="number" id="pageInput" class="page-input" min="1" max="604" placeholder="ص" onkeypress="if(event.key==='Enter') goPage(parseInt(this.value))">
+        <div class="page-info" id="pageInfo">ص 6</div>
+    </div>
+    <button class="nav-btn" id="nextBtn" onclick="goPage(currentPage + 1)">الصفحة التالية →</button>
+</div>
+
+<div class="content" id="content">
+    <div class="loading">
+        <div class="spinner"></div>
+        <div>جاري تحميل الصفحة...</div>
+    </div>
+</div>
+
+<script>
+    let currentPage = 6;
+    let pageData = null;
+
+    async function loadAndRender() {
+        try {
+            // Charger le JSON de la page 6
+            const response = await fetch('./006.json');
+            if (!response.ok) throw new Error('Impossible de charger 006.json');
+            
+            pageData = await response.json();
+            renderPage();
+        } catch (error) {
+            document.getElementById('content').innerHTML = `
+                <div class="error">
+                    ❌ ${error.message}<br>
+                    <small>Assure-toi que 006.json est dans le même dossier</small>
+                </div>
+            `;
+        }
+    }
+
+    function renderPage() {
+        if (!pageData) return;
+
+        const pageNum = pageData.page;
+        const surah = pageData.surahs[0];
+        const lines = pageData.lines;
+        
+        // Construire le HTML
+        let html = '<div class="page">';
+        
+        // Header
+        html += `
+            <div class="page-header">
+                <div class="surah-name">${surah.name_arabic}</div>
+                <div class="page-number-header">الصفحة ${pageNum}</div>
+            </div>
+        `;
+        
+        // Lines avec words
+        let lastVerseKey = null;
+        lines.forEach(lineData => {
+            html += '<div class="line">';
+            
+            lineData.words.forEach(word => {
+                // Ajouter le numéro de verset si c'est le premier mot du verset
+                if (word.verse_key !== lastVerseKey) {
+                    const verseNum = word.verse_key.split(':')[1];
+                    html += `<span class="verse-num">${verseNum}</span>`;
+                    lastVerseKey = word.verse_key;
+                }
+                
+                html += `<span class="word">${word.text}</span>`;
+            });
+            
+            html += '</div>';
+        });
+        
+        // Footer
+        html += `
+            <div class="page-footer">
+                <div>سورة ${surah.name_arabic}</div>
+                <div>${pageNum}</div>
+                <div>آيات ${surah.verse_start}-${surah.verse_end}</div>
+            </div>
+        `;
+        
+        html += '</div>';
+        
+        document.getElementById('content').innerHTML = html;
+        updateUI();
+    }
+
+    function updateUI() {
+        document.getElementById('pageInfo').textContent = `ص ${currentPage}`;
+        document.getElementById('pageInput').value = currentPage;
+        document.getElementById('prevBtn').disabled = currentPage === 1;
+        document.getElementById('nextBtn').disabled = currentPage === 604;
+    }
+
+    function goPage(page) {
+        if (page >= 1 && page <= 604) {
+            currentPage = page;
+            // Pour l'instant, affiche juste la page 6
+            if (page === 6 && pageData) {
+                renderPage();
+            } else {
+                document.getElementById('content').innerHTML = `
+                    <div class="error">Page ${page} - (Besoin du JSON correspondant)</div>
+                `;
+            }
+            updateUI();
+        }
+    }
+
+    // Charger au démarrage
+    window.addEventListener('load', loadAndRender);
+</script>
+
+</body>
+</html>

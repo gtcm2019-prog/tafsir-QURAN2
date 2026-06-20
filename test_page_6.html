@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>المصحف - صفحة 6 (TEST)</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body { height: 100%; font-family: 'Traditional Arabic', 'Arabic Typesetting', serif; direction: rtl; background: #d9d9d9; }
+        body { padding: 20px; }
+
+        .page {
+            background: #e8e3d3;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 40px 30px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            min-height: 1400px;
+            position: relative;
+        }
+
+        .page-header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #a68a2e;
+        }
+
+        .surah-name {
+            font-size: 28px;
+            color: #6b4423;
+            margin-bottom: 8px;
+        }
+
+        .page-number-header {
+            font-size: 12px;
+            color: #999;
+        }
+
+        .line {
+            line-height: 3;
+            font-size: 26px;
+            color: #2a2a2a;
+            text-align: justify;
+            word-spacing: 0.15em;
+            margin-bottom: 10px;
+            text-align: right;
+        }
+
+        .word {
+            display: inline;
+            margin: 0 2px;
+        }
+
+        .verse-num {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 26px;
+            height: 26px;
+            background: linear-gradient(135deg, #c4a747, #a68a2e);
+            color: #fff;
+            border-radius: 3px;
+            font-size: 10px;
+            font-weight: bold;
+            margin: 0 2px;
+            vertical-align: middle;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+        }
+
+        .page-footer {
+            position: absolute;
+            bottom: 20px;
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 30px;
+            font-size: 13px;
+            color: #5a5a5a;
+        }
+
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            font-size: 18px;
+            gap: 15px;
+        }
+
+        .spinner {
+            border: 4px solid #d9d9d9;
+            border-top-color: #a68a2e;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .error {
+            background: #fee5e5;
+            border: 2px solid #f88;
+            color: #c33;
+            padding: 20px;
+            border-radius: 4px;
+            margin: 20px;
+        }
+
+        .info {
+            background: #e8f5e8;
+            border: 2px solid #8f8;
+            color: #3a3;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="info">
+    📖 TEST RENDU PAGE 6 - Utilisant le format JSON avec words positioning
+</div>
+
+<div id="content" class="loading">
+    <div class="spinner"></div>
+    <div>جاري تحميل الصفحة...</div>
+</div>
+
+<script>
+    async function loadAndRender() {
+        try {
+            // Charger le JSON
+            const response = await fetch('./006.json');
+            if (!response.ok) throw new Error('Impossible de charger 006.json');
+            
+            const pageData = await response.json();
+            console.log('📄 Page chargée:', pageData.page);
+            
+            // Extraire les infos
+            const pageNum = pageData.page;
+            const surah = pageData.surahs[0];
+            const lines = pageData.lines;
+            
+            // Construire le HTML
+            let html = '<div class="page">';
+            
+            // Header
+            html += `
+                <div class="page-header">
+                    <div class="surah-name">${surah.name_arabic}</div>
+                    <div class="page-number-header">الصفحة ${pageNum}</div>
+                </div>
+            `;
+            
+            // Lines
+            let lastVerseKey = null;
+            lines.forEach(lineData => {
+                html += '<div class="line">';
+                
+                lineData.words.forEach(word => {
+                    // Ajouter le numéro de verset si c'est le premier mot du verset
+                    if (word.verse_key !== lastVerseKey) {
+                        const verseNum = word.verse_key.split(':')[1];
+                        html += `<span class="verse-num">${verseNum}</span>`;
+                        lastVerseKey = word.verse_key;
+                    }
+                    
+                    html += `<span class="word">${word.text}</span>`;
+                });
+                
+                html += '</div>';
+            });
+            
+            // Footer
+            const verseStart = surah.verse_start;
+            const verseEnd = surah.verse_end;
+            html += `
+                <div class="page-footer">
+                    <div>سورة ${surah.name_arabic}</div>
+                    <div>${pageNum}</div>
+                    <div>آيات ${verseStart}-${verseEnd}</div>
+                </div>
+            `;
+            
+            html += '</div>';
+            
+            // Afficher
+            document.getElementById('content').innerHTML = html;
+            console.log('✅ Page 6 rendue!');
+            
+        } catch (error) {
+            document.getElementById('content').innerHTML = `
+                <div class="error">
+                    <strong>❌ Erreur</strong><br>
+                    ${error.message}<br><br>
+                    <small>Assure-toi que 006.json est dans le même dossier que ce fichier HTML</small>
+                </div>
+            `;
+            console.error('Erreur:', error);
+        }
+    }
+    
+    window.addEventListener('load', loadAndRender);
+</script>
+
+</body>
+</html>

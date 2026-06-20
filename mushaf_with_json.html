@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>المصحف الشريف - 604 صفحة</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body { height: 100%; font-family: 'Traditional Arabic', 'Arabic Typesetting', serif; direction: rtl; background: #e8e8e8; }
+        body { display: flex; flex-direction: column; overflow: hidden; }
+
+        .header {
+            background: #2a2a2a;
+            color: #ccc;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        }
+
+        .header-left { display: flex; gap: 20px; align-items: center; }
+        .header-title { font-size: 18px; letter-spacing: 1px; }
+        .menu-icon { font-size: 24px; cursor: pointer; }
+        .nav-icons { display: flex; gap: 15px; font-size: 20px; cursor: pointer; }
+
+        .content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 30px 20px;
+            background: #d9d9d9;
+        }
+
+        .page {
+            background: #e8e3d3;
+            margin: 0 auto;
+            max-width: 900px;
+            padding: 40px 30px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            min-height: 1200px;
+            position: relative;
+        }
+
+        .columns {
+            display: flex;
+            gap: 25px;
+            direction: rtl;
+        }
+
+        .column {
+            flex: 1;
+            text-align: justify;
+        }
+
+        .verse-line {
+            line-height: 2.8;
+            font-size: 26px;
+            color: #2a2a2a;
+            word-spacing: 0.15em;
+            letter-spacing: 0.05em;
+            margin-bottom: 8px;
+        }
+
+        .verse-num {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 28px;
+            height: 28px;
+            background: linear-gradient(135deg, #c4a747, #a68a2e);
+            color: #fff;
+            border-radius: 3px;
+            font-size: 11px;
+            font-weight: bold;
+            margin: 0 3px;
+            vertical-align: middle;
+            text-align: center;
+            line-height: 1;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+        }
+
+        .page-footer {
+            position: absolute;
+            bottom: 20px;
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 30px;
+            font-size: 13px;
+            color: #5a5a5a;
+            letter-spacing: 1px;
+        }
+
+        .footer-left { display: flex; gap: 40px; }
+        .footer-item { text-align: center; }
+
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            font-size: 18px;
+            color: #666;
+            gap: 15px;
+        }
+
+        .spinner {
+            border: 4px solid #d9d9d9;
+            border-top-color: #a68a2e;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .error { color: #c33; padding: 40px; text-align: center; font-size: 16px; }
+
+        .nav-buttons {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 15px;
+            z-index: 100;
+        }
+
+        .nav-btn {
+            background: #a68a2e;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+            font-size: 14px;
+        }
+
+        .nav-btn:hover { background: #c4a747; transform: translateY(-2px); }
+        .nav-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+        .page-selector {
+            position: fixed;
+            bottom: 30px;
+            right: 20px;
+            display: flex;
+            gap: 10px;
+            z-index: 100;
+        }
+
+        .page-input {
+            width: 70px;
+            padding: 10px;
+            border: 2px solid #a68a2e;
+            border-radius: 4px;
+            text-align: center;
+            font-size: 14px;
+        }
+
+        .page-info {
+            background: #a68a2e;
+            color: white;
+            padding: 10px 15px;
+            border-radius: 4px;
+            font-size: 13px;
+            font-weight: bold;
+        }
+
+        @media (max-width: 800px) {
+            .columns { flex-direction: column; gap: 15px; }
+            .page { padding: 25px 15px; margin: 0 5px; }
+            .verse-line { font-size: 22px; line-height: 2.4; }
+            .page-footer { font-size: 12px; padding: 0 15px; }
+            .nav-buttons { flex-direction: column; }
+        }
+
+        .content::-webkit-scrollbar { width: 8px; }
+        .content::-webkit-scrollbar-thumb { background: #a68a2e; border-radius: 4px; }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <div class="header-left">
+        <span class="menu-icon">☰</span>
+        <span class="header-title">القائمة الرئيسية</span>
+    </div>
+    <div class="nav-icons">
+        <span>👥</span>
+        <span>🔗</span>
+        <span>🔍</span>
+    </div>
+</div>
+
+<div class="content" id="content">
+    <div class="loading">
+        <div class="spinner"></div>
+        <div>جاري تحميل المصحف...</div>
+    </div>
+</div>
+
+<div class="nav-buttons">
+    <button class="nav-btn" id="prevBtn" onclick="goPage(currentPage - 1)">← الصفحة السابقة</button>
+    <button class="nav-btn" id="nextBtn" onclick="goPage(currentPage + 1)">الصفحة التالية →</button>
+</div>
+
+<div class="page-selector">
+    <input type="number" id="pageInput" class="page-input" min="1" max="604" placeholder="ص" onkeypress="if(event.key==='Enter') goPage(parseInt(this.value))">
+    <div class="page-info" id="pageInfo">ص 1</div>
+</div>
+
+<script>
+    const API_URL = 'https://acxceakcjinxlntwnjrs.supabase.co/rest/v1';
+    const API_KEY = 'sb_publishable_WNdDrlceoqYxSdyFrz_XTw_kVx7m1V7';
+    const TABLE = 'ayahs';
+    
+    let currentPage = 1;
+    let allVerses = [];
+    let verseMapping = {}; // Mapping from verses.json
+
+    const surahNames = [
+        'الفاتحة', 'البقرة', 'آل عمران', 'النساء', 'المائدة', 'الأنعام', 'الأعراف', 'الأنفال', 'التوبة', 'يونس',
+        'هود', 'يوسف', 'الرعد', 'إبراهيم', 'الحجر', 'النحل', 'الإسراء', 'الكهف', 'مريم', 'طه',
+        'الأنبياء', 'الحج', 'المؤمنون', 'النور', 'الفرقان', 'الشعراء', 'النمل', 'القصص', 'العنكبوت', 'الروم',
+        'لقمان', 'السجدة', 'الأحزاب', 'سبأ', 'فاطر', 'يس', 'الصافات', 'ص', 'الزمر', 'غافر',
+        'فصلت', 'الشورى', 'الزخرف', 'الدخان', 'الجاثية', 'الأحقاف', 'محمد', 'الفتح', 'الحجرات', 'ق',
+        'الذاريات', 'الطور', 'النجم', 'القمر', 'الرحمن', 'الواقعة', 'الحديد', 'المجادلة', 'الحشر', 'الممتحنة',
+        'الصف', 'الجمعة', 'المنافقون', 'التغابن', 'الطلاق', 'التحريم', 'الملك', 'القلم', 'الحاقة', 'المعارج',
+        'نوح', 'الجن', 'المزمل', 'المدثر', 'القيامة', 'الإنسان', 'المرسلات', 'النبأ', 'النازعات', 'عبس',
+        'التكوير', 'الإنفطار', 'المطففين', 'الانشقاق', 'البروج', 'الطارق', 'الأعلى', 'الغاشية', 'الفجر', 'البلد',
+        'الشمس', 'الليل', 'الضحى', 'الشرح', 'التين', 'العلق', 'القدر', 'البينة', 'الزلزلة', 'العاديات',
+        'القارعة', 'التكاثر', 'العصر', 'الهمزة', 'الفيل', 'قريش', 'الماعون', 'الكوثر', 'الكافرون', 'النصر',
+        'المسد', 'الإخلاص', 'الفلق', 'الناس'
+    ];
+
+    async function init() {
+        try {
+            console.log('📥 جاري تحميل mapping الصفحات من verses.json...');
+            await loadVerseMapping();
+            console.log('📡 جاري تحميل المصحف من Supabase...');
+            await loadData();
+            console.log('✅ جاهز!');
+            renderPage(1);
+        } catch (error) {
+            showError('خطأ: ' + error.message);
+        }
+    }
+
+    async function loadVerseMapping() {
+        // Try to load from same directory
+        try {
+            const response = await fetch('./verses.json');
+            if (response.ok) {
+                verseMapping = await response.json();
+                console.log('✅ تم تحميل verses.json');
+                return;
+            }
+        } catch (e) {
+            console.warn('verses.json غير موجود في نفس المجلد');
+        }
+
+        // Try to load from other possible locations
+        const locations = [
+            '../verses.json',
+            '/verses.json',
+            'https://raw.githubusercontent.com/user/repo/verses.json' // adjust path
+        ];
+
+        for (let url of locations) {
+            try {
+                const response = await fetch(url);
+                if (response.ok) {
+                    verseMapping = await response.json();
+                    console.log(`✅ تم تحميل verses.json من ${url}`);
+                    return;
+                }
+            } catch (e) {}
+        }
+
+        console.warn('⚠️ verses.json لم يتم تحميله - سيتم استخدام حساب تقريبي للصفحات');
+    }
+
+    async function loadData() {
+        const url = `${API_URL}/${TABLE}?select=*&order=surah_number,ayah_number`;
+        const response = await fetch(url, {
+            headers: { 'apikey': API_KEY, 'Authorization': `Bearer ${API_KEY}` }
+        });
+        if (!response.ok) throw new Error(`خطأ HTTP ${response.status}`);
+        const data = await response.json();
+        if (!Array.isArray(data) || data.length === 0) throw new Error('لا توجد بيانات');
+        
+        // Add page from mapping
+        allVerses = data.map(verse => {
+            const key = `${verse.surah_number}:${verse.ayah_number}`;
+            if (verseMapping[key]) {
+                verse.page_mushaf = verseMapping[key].page;
+            } else {
+                // Fallback: use surah as rough estimate
+                verse.page_mushaf = Math.min(604, verse.surah_number * 5);
+            }
+            return verse;
+        });
+
+        console.log(`✅ تم تحميل ${allVerses.length} آية`);
+    }
+
+    function renderPage(pageNum) {
+        if (pageNum < 1 || pageNum > 604) return;
+        currentPage = pageNum;
+        
+        const verses = allVerses.filter(v => v.page_mushaf === pageNum);
+        if (verses.length === 0) {
+            document.getElementById('content').innerHTML = `<div class="error">❌ لا توجد آيات في الصفحة ${pageNum}</div>`;
+            updateUI();
+            return;
+        }
+
+        const surah = surahNames[verses[0].surah_number - 1];
+        const juz = Math.ceil(verses[0].surah_number / 3);
+        
+        // Split into two columns
+        const mid = Math.ceil(verses.length / 2);
+        const col1 = verses.slice(0, mid);
+        const col2 = verses.slice(mid);
+
+        let html = '<div class="page">';
+        html += '<div class="columns">';
+        
+        // Right column
+        html += '<div class="column">';
+        col1.forEach(v => {
+            html += `<div class="verse-line">${v.text_uthmani}<span class="verse-num">${v.ayah_number}</span></div>`;
+        });
+        html += '</div>';
+        
+        // Left column
+        html += '<div class="column">';
+        col2.forEach(v => {
+            html += `<div class="verse-line">${v.text_uthmani}<span class="verse-num">${v.ayah_number}</span></div>`;
+        });
+        html += '</div>';
+        
+        html += '</div>';
+        
+        // Footer
+        html += `
+            <div class="page-footer">
+                <div class="footer-left">
+                    <div class="footer-item">سورة ${surah}</div>
+                    <div class="footer-item">${pageNum}</div>
+                </div>
+                <div class="footer-item">جزء ${juz}</div>
+            </div>
+        `;
+        
+        html += '</div>';
+        
+        document.getElementById('content').innerHTML = html;
+        updateUI();
+    }
+
+    function updateUI() {
+        document.getElementById('pageInfo').textContent = `ص ${currentPage}`;
+        document.getElementById('pageInput').value = currentPage;
+        document.getElementById('prevBtn').disabled = currentPage === 1;
+        document.getElementById('nextBtn').disabled = currentPage === 604;
+    }
+
+    function goPage(page) {
+        if (page >= 1 && page <= 604) renderPage(page);
+    }
+
+    function showError(msg) {
+        document.getElementById('content').innerHTML = `<div class="error">${msg}</div>`;
+    }
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowRight') goPage(currentPage - 1);
+        if (e.key === 'ArrowLeft') goPage(currentPage + 1);
+    });
+
+    init();
+</script>
+
+</body>
+</html>

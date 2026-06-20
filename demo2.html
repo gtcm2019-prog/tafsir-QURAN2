@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>QCF4 Mushaf</title>
+
+<style>
+/* ─────────────── BASE ─────────────── */
+body {
+  margin: 0;
+  background: #f4ecd8; /* 📜 beige papier */
+  color: #000;
+  font-family: "Noto Naskh Arabic", serif;
+}
+
+/* ─────────────── TOP BAR ─────────────── */
+.controls {
+  position: sticky;
+  top: 0;
+  background: #efe3c2;
+  padding: 12px;
+  text-align: center;
+  border-bottom: 1px solid #d6c6a5;
+}
+
+select {
+  padding: 6px 10px;
+  font-family: monospace;
+  border: 1px solid #c8b58f;
+  border-radius: 6px;
+  background: #fff;
+  color: #000;
+  cursor: pointer;
+}
+
+/* ─────────────── PAGE RENDER ─────────────── */
+#page-render {
+  padding: 50px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+/* ligne mushaf */
+.mushaf-line {
+  display: flex;
+  direction: rtl;
+  justify-content: center;
+  width: 100%;
+}
+
+/* mot */
+.mushaf-word {
+  padding: 0 2px;
+  font-size: 32px;
+  line-height: 2;
+  color: #000;
+  transition: 0.15s;
+}
+
+/* hover doux */
+.mushaf-word:hover {
+  color: #b38b2a;
+  background: rgba(179, 139, 42, 0.08);
+  border-radius: 3px;
+}
+</style>
+</head>
+
+<body>
+
+<!-- 🎛 SELECT PAGE -->
+<div class="controls">
+  <label>Page: </label>
+  <select id="page-select"></select>
+</div>
+
+<!-- 📖 RENDER AREA -->
+<div id="page-render"></div>
+
+<script>
+
+/* ─────────────── SOURCES ─────────────── */
+const CDN_DATA  = "https://raw.githubusercontent.com/MohamadHajjRabee/quran-qcf4/main";
+const CDN_FONTS = "https://cdn.jsdelivr.net/gh/MohamadHajjRabee/quran-qcf4@main";
+
+const loadedFonts = new Set();
+
+/* ─────────────── LOAD FONT ─────────────── */
+async function loadFont(fontName) {
+  if (loadedFonts.has(fontName)) return;
+
+  const file = fontName === "QCF4_QBSML"
+    ? `${fontName}.woff2`
+    : `${fontName}_W.woff2`;
+
+  const url = `${CDN_FONTS}/fonts-woff2/${file}`;
+
+  const ff = new FontFace(fontName, `url(${url})`);
+  await ff.load();
+  document.fonts.add(ff);
+
+  loadedFonts.add(fontName);
+}
+
+/* ─────────────── LOAD PAGE ─────────────── */
+async function loadPage(page) {
+  const padded = String(page).padStart(3, "0");
+
+  const res = await fetch(`${CDN_DATA}/pages/${padded}.json`);
+  const data = await res.json();
+
+  renderPage(data);
+}
+
+/* ─────────────── RENDER PAGE ─────────────── */
+async function renderPage(data) {
+  const container = document.getElementById("page-render");
+  container.innerHTML = "";
+
+  const fonts = new Set();
+  fonts.add(data.font);
+
+  data.lines.forEach(line => {
+    line.words.forEach(word => {
+      fonts.add(word.font);
+    });
+  });
+
+  await Promise.all([...fonts].map(loadFont));
+
+  data.lines.forEach(line => {
+    const row = document.createElement("div");
+    row.className = "mushaf-line";
+
+    line.words.forEach(word => {
+      const span = document.createElement("span");
+      span.className = "mushaf-word";
+      span.textContent = word.char;
+      span.style.fontFamily = word.font;
+
+      row.appendChild(span);
+    });
+
+    container.appendChild(row);
+  });
+}
+
+/* ─────────────── INIT SELECT ─────────────── */
+const sel = document.getElementById("page-select");
+
+for (let i = 1; i <= 604; i++) {
+  const opt = document.createElement("option");
+  opt.value = i;
+  opt.textContent = String(i).padStart(3, "0");
+  sel.appendChild(opt);
+}
+
+sel.addEventListener("change", () => {
+  loadPage(sel.value);
+});
+
+/* ─────────────── START ─────────────── */
+loadPage(1);
+
+</script>
+
+</body>
+</html>

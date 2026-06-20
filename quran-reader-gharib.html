@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>QCF4 Mushaf</title>
+<style>
+/* ─────────────── BASE ─────────────── */
+body {
+  margin: 0;
+  background: #f4ecd8; /* 📜 beige papier */
+  color: #000;
+  font-family: "Noto Naskh Arabic", serif;
+}
+/* ─────────────── TOP BAR ─────────────── */
+.controls {
+  position: sticky;
+  top: 0;
+  background: #efe3c2;
+  padding: 12px;
+  text-align: center;
+  border-bottom: 1px solid #d6c6a5;
+  z-index: 50;
+}
+select {
+  padding: 6px 10px;
+  font-family: monospace;
+  border: 1px solid #c8b58f;
+  border-radius: 6px;
+  background: #fff;
+  color: #000;
+  cursor: pointer;
+}
+/* ─────────────── PAGE RENDER ─────────────── */
+#page-render {
+  padding: 50px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+/* ligne mushaf */
+.mushaf-line {
+  display: flex;
+  direction: rtl;
+  justify-content: center;
+  width: 100%;
+  flex-wrap: wrap;
+}
+/* mot */
+.mushaf-word {
+  padding: 0 2px;
+  font-size: 32px;
+  line-height: 2;
+  color: #000;
+  transition: 0.15s;
+}
+/* hover doux */
+.mushaf-word:hover {
+  color: #b38b2a;
+  background: rgba(179, 139, 42, 0.08);
+  border-radius: 3px;
+}
+
+/* ─────────────── MOT AVEC EXPLICATION (GHARIB) ─────────────── */
+.mushaf-word.gharib-word {
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  text-decoration-color: #b38b2a;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 6px;
+}
+.mushaf-word.gharib-word:hover,
+.mushaf-word.gharib-word.active-term {
+  color: #8a6010;
+  background: rgba(179, 139, 42, 0.15);
+  border-radius: 3px;
+}
+
+/* ─────────────── POPUP EXPLICATION ─────────────── */
+.gharib-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.25);
+  z-index: 998;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s;
+}
+.gharib-overlay.visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.gharib-popup {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: #fffaf0;
+  border-top: 3px solid #b38b2a;
+  border-radius: 16px 16px 0 0;
+  box-shadow: 0 -8px 24px rgba(0,0,0,0.25);
+  padding: 20px 24px 28px;
+  z-index: 999;
+  transform: translateY(110%);
+  transition: transform 0.25s ease;
+  max-height: 45vh;
+  overflow-y: auto;
+}
+.gharib-popup.visible {
+  transform: translateY(0);
+}
+
+.gharib-close {
+  position: absolute;
+  top: 10px;
+  left: 14px;
+  width: 30px;
+  height: 30px;
+  border: none;
+  background: #efe3c2;
+  color: #6b5530;
+  border-radius: 50%;
+  font-size: 18px;
+  cursor: pointer;
+  line-height: 1;
+}
+.gharib-close:hover { background: #e0d2a8; }
+
+.gharib-term {
+  font-size: 28px;
+  font-weight: bold;
+  color: #8a6010;
+  margin-bottom: 10px;
+  padding-right: 4px;
+  text-align: right;
+}
+
+.gharib-explanation {
+  font-size: 19px;
+  color: #2a2a2a;
+  line-height: 1.8;
+  text-align: right;
+}
+
+.gharib-label {
+  font-family: monospace;
+  font-size: 11px;
+  letter-spacing: 1px;
+  color: #a08a55;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+  text-align: right;
+}
+
+@media (max-width: 600px) {
+  .gharib-popup { padding: 16px 18px 24px; }
+  .gharib-term { font-size: 22px; }
+  .gharib-explanation { font-size: 17px; }
+}
+</style>
+</head>
+<body>
+
+<!-- 🎛 SELECT PAGE -->
+<div class="controls">
+  <label>Page: </label>
+  <select id="page-select"></select>
+</div>
+
+<!-- 📖 RENDER AREA -->
+<div id="page-render"></div>
+
+<!-- 💬 POPUP EXPLICATION (Gharib al-Quran) -->
+<div class="gharib-overlay" id="gharib-overlay"></div>
+<div class="gharib-popup" id="gharib-popup">
+  <button class="gharib-close" id="gharib-close">×</button>
+  <div class="gharib-label">معنى الكلمة</div>
+  <div class="gharib-term" id="gharib-term"></div>
+  <div class="gharib-explanation" id="gharib-explanation"></div>
+</div>
+
+<script>
+/* ─────────────── SOURCES ─────────────── */
+const CDN_DATA  = "https://raw.githubusercontent.com/MohamadHajjRabee/quran-qcf4/main";
+const CDN_FONTS = "https://cdn.jsdelivr.net/gh/MohamadHajjRabee/quran-qcf4@main";
+const loadedFonts = new Set();
+
+/* ─────────────── LOAD FONT ─────────────── */
+async function loadFont(fontName) {
+  if (loadedFonts.has(fontName)) return;
+  const file = fontName === "QCF4_QBSML"
+    ? `${fontName}.woff2`
+    : `${fontName}_W.woff2`;
+  const url = `${CDN_FONTS}/fonts-woff2/${file}`;
+  const ff = new FontFace(fontName, `url(${url})`);
+  await ff.load();
+  document.fonts.add(ff);
+  loadedFonts.add(fontName);
+}
+
+/* ─────────────── LOAD PAGE ─────────────── */
+async function loadPage(page) {
+  const padded = String(page).padStart(3, "0");
+  const res = await fetch(`${CDN_DATA}/pages/${padded}.json`);
+  const data = await res.json();
+  renderPage(data);
+}
+
+/* ════════════════════════════════════════════════════════════
+   GHARIB AL-QURAN — mots difficiles + explications au clic
+   ════════════════════════════════════════════════════════════ */
+
+let gharibData = null;          // contenu brut de gharib.json
+const gharibParsedCache = {};   // cache: verse_key -> [{term, normTerm, explanation}]
+
+async function loadGharibData() {
+  try {
+    const res = await fetch("gharib.json");
+    if (!res.ok) throw new Error("gharib.json introuvable");
+    gharibData = await res.json();
+  } catch (e) {
+    console.warn("⚠️ Impossible de charger gharib.json — les explications seront désactivées.", e);
+    gharibData = {};
+  }
+}
+
+// Marqueurs internes pour les lettres "optionnelles" dans les termes gharib
+const M_ALEF = "\u0001"; // alef suscrit (ٰ) -> peut correspondre à "ا" ou rien
+const M_WAW  = "\u0002"; // waw suscrit (ۥ)  -> peut correspondre à "و" ou rien
+const M_YA   = "\u0003"; // ya suscrit (ۦ)   -> peut correspondre à "ي" ou rien
+
+// Supprime les caractères invisibles de formatage + les diacritiques (tashkeel)
+function stripInvisiblesAndDiacritics(s) {
+  s = s.replace(/[\u200B-\u200F\u2060\uFEFF]/g, "");
+  s = s.replace(/[\u0610-\u061A\u064B-\u065F\u06D6-\u06ED\u08D4-\u08FF]/g, "");
+  s = s.replace(/\u0640/g, ""); // tatweel
+  return s;
+}
+
+// Normalise un MOT RÉEL (provenant de la page QCF4) pour la comparaison
+function normalizeCandidate(s) {
+  if (!s) return "";
+  s = s.replace(/\u06E5/g, "\u0648");  // small waw -> waw (lettre réelle)
+  s = s.replace(/\u06E6/g, "\u064A");  // small ya -> ya (lettre réelle)
+  s = s.replace(/\u0671/g, "\u0627");  // alef wasla -> alef
+  s = s.replace(/\u0670/g, "\u0627");  // dagger alef -> alef
+  s = stripInvisiblesAndDiacritics(s);
+  s = s.replace(/[\u0622\u0623\u0625]/g, "\u0627"); // hamzat -> alef
+  s = s.replace(/\u0649/g, "\u064A");   // alef maksura -> ya
+  s = s.replace(/\s+/g, " ").trim();
+  return s;
+}
+
+// Normalise un TERME gharib en gardant des marqueurs pour les lettres optionnelles
+function normalizeTermPattern(s) {
+  if (!s) return "";
+  // Nettoie les espaces parasites placés juste avant un alef suscrit / word-joiner
+  // (artefact d'encodage du texte source pour le rendu des voyelles longues)
+  s = s.replace(/\s+(?=[\u0670\u2060])/g, "");
+  s = s.replace(/\u0671/g, "\u0627");  // alef wasla -> alef (lettre réelle, non optionnelle)
+  s = s.replace(/\u0670/g, M_ALEF);    // dagger alef -> marqueur optionnel
+  s = s.replace(/\u06E5/g, M_WAW);     // small waw -> marqueur optionnel
+  s = s.replace(/\u06E6/g, M_YA);      // small ya -> marqueur optionnel
+  s = stripInvisiblesAndDiacritics(s);
+  s = s.replace(/[\u0622\u0623\u0625]/g, "\u0627");
+  s = s.replace(/\u0649/g, "\u064A");
+  s = s.replace(/\s+/g, " ").trim();
+  return s;
+}
+
+// Échappe une chaîne pour une utilisation littérale dans une RegExp
+function escapeRegExp(s) {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+// Construit une RegExp à partir d'un terme normalisé (marqueurs -> lettres optionnelles)
+function termPatternToRegex(normPattern) {
+  let escaped = escapeRegExp(normPattern);
+  escaped = escaped.split(M_ALEF).join("\u0627?");
+  escaped = escaped.split(M_WAW).join("\u0648?");
+  escaped = escaped.split(M_YA).join("\u064A?");
+  return new RegExp("^" + escaped + "$");
+}
+
+// Extrait les termes {term, regex, wordCount, explanation} du HTML d'un verset gharib
+function parseGharibHtml(html) {
+  const results = [];
+  const re = /<span class="qpc-hafs">(.*?)<\/span>:\s*([^<]*)<\/p>/g;
+  let m;
+  while ((m = re.exec(html)) !== null) {
+    const termRaw = m[1].replace(/[\ufd3e\ufd3f]/g, "").trim();
+    const explanation = m[2].trim();
+    const pattern = normalizeTermPattern(termRaw);
+    const wordCount = pattern.replace(new RegExp(`[${M_ALEF}${M_WAW}${M_YA}]`, "g"), "").split(" ").filter(Boolean).length;
+    results.push({ term: termRaw, regex: termPatternToRegex(pattern), wordCount, explanation });
+  }
+  // Termes les plus longs en premier (priorité à la correspondance la plus longue)
+  results.sort((a, b) => b.wordCount - a.wordCount);
+  return results;
+}
+
+// Retourne la liste des termes gharib pour un verset (avec gestion des redirections + cache)
+function getGharibTerms(verseKey) {
+  if (gharibParsedCache[verseKey]) return gharibParsedCache[verseKey];
+  if (!gharibData) return [];
+
+  let entry = gharibData[verseKey];
+  // Redirection : la valeur est une chaîne pointant vers un autre verset
+  let depth = 0;
+  while (typeof entry === "string" && depth < 5) {
+    entry = gharibData[entry];
+    depth++;
+  }
+  if (!entry || typeof entry !== "object" || !entry.text) {
+    gharibParsedCache[verseKey] = [];
+    return [];
+  }
+  const parsed = parseGharibHtml(entry.text);
+  gharibParsedCache[verseKey] = parsed;
+  return parsed;
+}
+
+// Construit une map "lineIdx-idxInLine" -> {term, explanation} pour toute la page
+function buildGharibMatches(data) {
+  const matchMap = {};
+
+  // 1) Liste globale des mots avec leur position (ligne, index dans la ligne)
+  const allEntries = [];
+  data.lines.forEach((line, lineIdx) => {
+    line.words.forEach((w, idxInLine) => {
+      allEntries.push({ lineIdx, idxInLine, w });
+    });
+  });
+
+  // 2) Regroupement par verset
+  const byVerse = {};
+  allEntries.forEach(entry => {
+    if (entry.w.type === "word" && entry.w.verse_key) {
+      (byVerse[entry.w.verse_key] = byVerse[entry.w.verse_key] || []).push(entry);
+    }
+  });
+
+  // 3) Pour chaque verset, recherche des termes gharib (correspondance la plus longue d'abord)
+  Object.keys(byVerse).forEach(verseKey => {
+    const entries = byVerse[verseKey];
+    const ghTerms = getGharibTerms(verseKey);
+    if (!ghTerms.length) return;
+
+    const normWords = entries.map(e => normalizeCandidate(e.w.text));
+    let i = 0;
+    while (i < normWords.length) {
+      let matched = false;
+      for (const t of ghTerms) {
+        const wsize = t.wordCount;
+        if (wsize < 1 || i + wsize > normWords.length) continue;
+        const candidate = normWords.slice(i, i + wsize).join(" ");
+        if (t.regex.test(candidate)) {
+          for (let k = i; k < i + wsize; k++) {
+            const e = entries[k];
+            matchMap[`${e.lineIdx}-${e.idxInLine}`] = t;
+          }
+          i += wsize;
+          matched = true;
+          break;
+        }
+      }
+      if (!matched) i++;
+    }
+  });
+
+  return matchMap;
+}
+
+/* ─────────────── POPUP UI ─────────────── */
+const gharibOverlay = document.getElementById("gharib-overlay");
+const gharibPopup = document.getElementById("gharib-popup");
+const gharibTermEl = document.getElementById("gharib-term");
+const gharibExplEl = document.getElementById("gharib-explanation");
+const gharibCloseBtn = document.getElementById("gharib-close");
+
+function showGharibPopup(term, explanation) {
+  gharibTermEl.textContent = term;
+  gharibExplEl.textContent = explanation;
+  gharibOverlay.classList.add("visible");
+  gharibPopup.classList.add("visible");
+}
+
+function hideGharibPopup() {
+  gharibOverlay.classList.remove("visible");
+  gharibPopup.classList.remove("visible");
+  document.querySelectorAll(".gharib-word.active-term").forEach(el => el.classList.remove("active-term"));
+}
+
+gharibOverlay.addEventListener("click", hideGharibPopup);
+gharibCloseBtn.addEventListener("click", hideGharibPopup);
+
+/* ─────────────── RENDER PAGE ─────────────── */
+async function renderPage(data) {
+  const container = document.getElementById("page-render");
+  container.innerHTML = "";
+  hideGharibPopup();
+
+  const fonts = new Set();
+  fonts.add(data.font);
+  data.lines.forEach(line => {
+    line.words.forEach(word => {
+      fonts.add(word.font);
+    });
+  });
+  await Promise.all([...fonts].map(loadFont));
+
+  // Calcule les correspondances de mots difficiles pour cette page
+  const matchMap = buildGharibMatches(data);
+
+  data.lines.forEach((line, lineIdx) => {
+    const row = document.createElement("div");
+    row.className = "mushaf-line";
+
+    line.words.forEach((word, idxInLine) => {
+      const span = document.createElement("span");
+      span.className = "mushaf-word";
+      span.textContent = word.char;
+      span.style.fontFamily = word.font;
+
+      const match = matchMap[`${lineIdx}-${idxInLine}`];
+      if (match) {
+        span.classList.add("gharib-word");
+        span.addEventListener("click", (e) => {
+          e.stopPropagation();
+          document.querySelectorAll(".gharib-word.active-term").forEach(el => el.classList.remove("active-term"));
+          // Active tous les mots du même groupe (même explication) visuellement
+          document.querySelectorAll(".mushaf-word.gharib-word").forEach(el => {
+            if (el.dataset.expl === match.explanation) el.classList.add("active-term");
+          });
+          showGharibPopup(match.term, match.explanation);
+        });
+        span.dataset.expl = match.explanation;
+      }
+
+      row.appendChild(span);
+    });
+
+    container.appendChild(row);
+  });
+}
+
+/* ─────────────── INIT SELECT ─────────────── */
+const sel = document.getElementById("page-select");
+for (let i = 1; i <= 604; i++) {
+  const opt = document.createElement("option");
+  opt.value = i;
+  opt.textContent = String(i).padStart(3, "0");
+  sel.appendChild(opt);
+}
+sel.addEventListener("change", () => {
+  loadPage(sel.value);
+});
+
+/* ─────────────── START ─────────────── */
+(async () => {
+  await loadGharibData();
+  loadPage(1);
+})();
+</script>
+</body>
+</html>

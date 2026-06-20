@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>مصحف المدينة - 604 صفحة</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    @font-face {
+      font-family: 'QCF4_Hafs';
+      src: url('fonts-woff2/QCF4_Hafs_01.woff2') format('woff2');
+      font-display: swap;
+    }
+
+    html, body { height: 100%; }
+
+    body {
+      font-family: 'QCF4_Hafs', 'Arabic Typesetting', serif;
+      background: #2c2c2c;
+      color: #333;
+    }
+
+    .app-container {
+      display: flex;
+      height: 100vh;
+      background: #f5f5f5;
+    }
+
+    /* SIDEBAR */
+    .sidebar {
+      width: 280px;
+      background: white;
+      border-left: 3px solid #8b7355;
+      overflow-y: auto;
+      padding: 20px;
+      box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+    }
+
+    .sidebar-title {
+      color: #8b7355;
+      font-size: 1.4em;
+      margin-bottom: 20px;
+      text-align: center;
+      font-weight: bold;
+    }
+
+    .page-input-group {
+      margin-bottom: 20px;
+      display: flex;
+      gap: 10px;
+    }
+
+    .page-input-group input {
+      flex: 1;
+      padding: 10px;
+      border: 2px solid #ddd;
+      border-radius: 4px;
+      text-align: center;
+      font-size: 1em;
+    }
+
+    .page-input-group button {
+      flex: 0.8;
+      padding: 10px;
+      background: #8b7355;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: bold;
+      transition: all 0.3s;
+    }
+
+    .page-input-group button:hover {
+      background: #6b5345;
+    }
+
+    .pages-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .page-btn {
+      padding: 12px;
+      background: white;
+      border: 2px solid #ddd;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: all 0.3s;
+      color: #333;
+    }
+
+    .page-btn:hover {
+      background: #f0f0f0;
+      border-color: #8b7355;
+    }
+
+    .page-btn.active {
+      background: #8b7355;
+      color: white;
+      border-color: #8b7355;
+    }
+
+    .status-info {
+      background: #f9f9f9;
+      padding: 15px;
+      border-radius: 4px;
+      font-size: 0.95em;
+      color: #666;
+      margin-top: 20px;
+      border-left: 4px solid #8b7355;
+    }
+
+    .status-info p {
+      margin-bottom: 8px;
+      line-height: 1.6;
+    }
+
+    /* MAIN CONTENT */
+    .main-view {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background: linear-gradient(135deg, #f5e6d3 0%, #e8d7c3 100%);
+      overflow: hidden;
+    }
+
+    .controls-bar {
+      padding: 15px 20px;
+      background: white;
+      border-bottom: 2px solid #8b7355;
+      display: flex;
+      justify-content: center;
+      gap: 15px;
+      flex-wrap: wrap;
+    }
+
+    .nav-btn {
+      padding: 10px 25px;
+      background: #8b7355;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: bold;
+      font-size: 1em;
+      transition: all 0.3s;
+    }
+
+    .nav-btn:hover:not(:disabled) {
+      background: #6b5345;
+      transform: translateY(-2px);
+    }
+
+    .nav-btn:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+
+    .page-viewer {
+      flex: 1;
+      overflow-y: auto;
+      padding: 30px;
+      display: flex;
+      justify-content: center;
+    }
+
+    .page-frame {
+      background: white;
+      width: 100%;
+      max-width: 850px;
+      box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+      border: 20px solid #8b7355;
+      padding: 45px;
+      min-height: 1150px;
+    }
+
+    .page-header {
+      text-align: center;
+      margin-bottom: 25px;
+      padding-bottom: 15px;
+      border-bottom: 2px solid #8b7355;
+    }
+
+    .page-num {
+      font-size: 1.3em;
+      color: #8b7355;
+      font-weight: bold;
+    }
+
+    .page-body {
+      font-size: 1.7em;
+      line-height: 2.6;
+      text-align: center;
+      color: #333;
+      font-family: 'QCF4_Hafs', serif;
+      letter-spacing: 0.02em;
+    }
+
+    .ayah-item {
+      margin: 12px 0;
+      padding: 8px;
+      border-radius: 3px;
+      transition: all 0.2s;
+    }
+
+    .ayah-item:hover {
+      background: #f5f0e6;
+      border-right: 3px solid #8b7355;
+    }
+
+    .ayah-text {
+      display: inline;
+      font-family: 'QCF4_Hafs', serif;
+    }
+
+    .ayah-num {
+      display: inline-block;
+      background: #8b7355;
+      color: white;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      text-align: center;
+      line-height: 32px;
+      margin: 0 5px;
+      font-size: 0.75em;
+      font-weight: bold;
+    }
+
+    .page-footer {
+      text-align: center;
+      margin-top: 25px;
+      padding-top: 15px;
+      border-top: 2px solid #8b7355;
+      color: #8b7355;
+      font-size: 0.9em;
+      line-height: 1.6;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 40px;
+      color: #8b7355;
+      font-size: 1.2em;
+    }
+
+    .error {
+      background: #ffebee;
+      color: #c62828;
+      padding: 20px;
+      border-radius: 4px;
+      margin: 10px;
+      border-left: 4px solid #c62828;
+    }
+
+    .status-bar {
+      position: fixed;
+      bottom: 15px;
+      right: 15px;
+      background: #8b7355;
+      color: white;
+      padding: 12px 20px;
+      border-radius: 4px;
+      font-size: 0.95em;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    }
+
+    @media (max-width: 1000px) {
+      .app-container {
+        flex-direction: column;
+      }
+      .sidebar {
+        width: 100%;
+        border-left: none;
+        border-bottom: 3px solid #8b7355;
+        max-height: 200px;
+      }
+      .pages-grid {
+        grid-template-columns: repeat(4, 1fr);
+      }
+    }
+
+    scrollbar-width: thin;
+    scrollbar-color: #8b7355 #f5f5f5;
+  </style>
+</head>
+<body>
+  <div class="app-container">
+    <!-- SIDEBAR -->
+    <div class="sidebar">
+      <div class="sidebar-title">📖 مصحف المدينة</div>
+      
+      <div class="page-input-group">
+        <input type="number" id="pageJump" min="1" max="604" placeholder="رقم الصفحة">
+        <button onclick="jumpToPage()">اذهب</button>
+      </div>
+
+      <div class="pages-grid" id="pagesGrid"></div>
+
+      <div class="status-info">
+        <p><strong>الصفحة الحالية:</strong> <span id="currentPageDisplay">1</span></p>
+        <p><strong>الإجمالي:</strong> 604 صفحة</p>
+        <p><strong>الخط:</strong> QCF4 Hafs</p>
+        <p style="margin-top: 10px; font-size: 0.85em; color: #999;">جميع الآيات محملة من قاعدة بيانات Supabase</p>
+      </div>
+    </div>
+
+    <!-- MAIN VIEW -->
+    <div class="main-view">
+      <div class="controls-bar">
+        <button class="nav-btn" onclick="prevPage()" id="prevBtn">← الصفحة السابقة</button>
+        <button class="nav-btn" onclick="nextPage()" id="nextBtn">الصفحة التالية →</button>
+      </div>
+
+      <div class="page-viewer">
+        <div class="page-frame" id="pageFrame">
+          <div class="loading">جاري التحميل...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="status-bar" id="statusBar">✅ جاهز</div>
+
+  <script>
+    // CONFIG
+    const CONFIG = {
+      SUPABASE_URL: 'https://acxceakcjinxlntwnjrs.supabase.co',
+      SUPABASE_KEY: 'sb_publishable_WNdDrlceoqYxSdyFrz_XTw_kVx7m1V7'
+    };
+
+    let supabase = null;
+    let currentPage = 1;
+    let allAyahs = {};
+    let versesMap = {};
+
+    // INIT
+    async function init() {
+      if (!supabase) {
+        const { createClient } = window.supabase;
+        supabase = createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_KEY);
+      }
+
+      // حاول تحميل verses.json من نفس المجلد
+      try {
+        const resp = await fetch('verses.json');
+        if (resp.ok) {
+          versesMap = await resp.json();
+          updateStatus('✅ Verses JSON loaded');
+        }
+      } catch (e) {
+        // لا مشكلة - نستخدم page_mushaf من DB
+      }
+
+      // حمل جميع الآيات
+      await loadAyahs();
+      
+      // عرض الصفحة الأولى
+      loadPage(1);
+      
+      // أنشئ شبكة الصفحات
+      createPageGrid();
+    }
+
+    // تحميل الآيات من Supabase
+    async function loadAyahs() {
+      try {
+        updateStatus('⏳ تحميل الآيات...');
+        
+        const { data, error } = await supabase
+          .from('ayahs')
+          .select('*')
+          .order('id');
+
+        if (error) throw error;
+
+        data.forEach(ayah => {
+          const key = `${ayah.surah_number}:${ayah.ayah_number}`;
+          allAyahs[key] = ayah;
+        });
+
+        updateStatus(`✅ ${Object.keys(allAyahs).length} آيات محملة`);
+      } catch (e) {
+        updateStatus('❌ خطأ في تحميل الآيات');
+        console.error(e);
+      }
+    }
+
+    // تحميل صفحة
+    async function loadPage(pageNum) {
+      if (pageNum < 1 || pageNum > 604) return;
+
+      currentPage = pageNum;
+      document.getElementById('currentPageDisplay').textContent = pageNum;
+
+      const frame = document.getElementById('pageFrame');
+      frame.innerHTML = '<div class="loading">جاري التحميل...</div>';
+
+      // ابحث عن الآيات في هذه الصفحة
+      const ayahsOnPage = [];
+      
+      for (const [key, ayah] of Object.entries(allAyahs)) {
+        if (ayah.page_mushaf === pageNum) {
+          ayahsOnPage.push(ayah);
+        }
+      }
+
+      // رتب الآيات
+      ayahsOnPage.sort((a, b) => {
+        if (a.surah_number !== b.surah_number) {
+          return a.surah_number - b.surah_number;
+        }
+        return a.ayah_number - b.ayah_number;
+      });
+
+      // أنشئ محتوى الصفحة
+      let html = `
+        <div class="page-header">
+          <div class="page-num">صفحة ${pageNum}</div>
+        </div>
+        <div class="page-body">
+      `;
+
+      if (ayahsOnPage.length === 0) {
+        html += '<p style="color: #999;">لا توجد آيات في هذه الصفحة</p>';
+      } else {
+        ayahsOnPage.forEach(ayah => {
+          html += `
+            <div class="ayah-item">
+              <span class="ayah-text">${ayah.text_simple}</span>
+              <span class="ayah-num">${ayah.ayah_number}</span>
+            </div>
+          `;
+        });
+      }
+
+      html += `
+        </div>
+        <div class="page-footer">
+          الصفحة ${pageNum} من 604 | مصحف المدينة المنورة | خط QCF4 Hafs
+        </div>
+      `;
+
+      frame.innerHTML = html;
+
+      // حدّث أزرار التنقل
+      document.getElementById('prevBtn').disabled = pageNum === 1;
+      document.getElementById('nextBtn').disabled = pageNum === 604;
+
+      // حدّث الشبكة
+      document.querySelectorAll('.page-btn').forEach(btn => {
+        btn.classList.remove('active');
+        if (parseInt(btn.textContent) === pageNum) {
+          btn.classList.add('active');
+        }
+      });
+
+      updateStatus(`📄 صفحة ${pageNum}/604`);
+    }
+
+    // التنقل
+    function nextPage() {
+      if (currentPage < 604) loadPage(currentPage + 1);
+    }
+
+    function prevPage() {
+      if (currentPage > 1) loadPage(currentPage - 1);
+    }
+
+    function jumpToPage() {
+      const input = document.getElementById('pageJump');
+      const num = parseInt(input.value);
+      if (num >= 1 && num <= 604) {
+        loadPage(num);
+        input.value = '';
+      } else {
+        alert('الرجاء إدخال رقم صفحة بين 1 و 604');
+      }
+    }
+
+    // شبكة الصفحات
+    function createPageGrid() {
+      const grid = document.getElementById('pagesGrid');
+      grid.innerHTML = '';
+      
+      for (let i = 1; i <= 20; i += 2) {
+        const btn = document.createElement('button');
+        btn.className = 'page-btn';
+        btn.textContent = i;
+        btn.onclick = () => loadPage(i);
+        grid.appendChild(btn);
+      }
+    }
+
+    function updateStatus(msg) {
+      document.getElementById('statusBar').textContent = msg;
+    }
+
+    // اختصارات لوحة المفاتيح
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight') prevPage();
+      if (e.key === 'ArrowLeft') nextPage();
+    });
+
+    // ابدأ
+    window.addEventListener('load', init);
+  </script>
+</body>
+</html>

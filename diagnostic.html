@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تشخيص قاعدة البيانات</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body { height: 100%; font-family: Arial, monospace; direction: rtl; background: #1e1e1e; color: #dcdcdc; }
+        body { padding: 20px; overflow-y: auto; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        h1 { color: #4ec9b0; margin-bottom: 20px; font-size: 24px; }
+        h2 { color: #9cdcfe; margin-top: 30px; margin-bottom: 10px; font-size: 18px; border-bottom: 2px solid #4ec9b0; padding-bottom: 10px; }
+        .box { background: #252526; border: 1px solid #3e3e42; padding: 15px; border-radius: 4px; margin: 15px 0; }
+        .success { background: #1e4d2b; border: 1px solid #4ec9b0; color: #4ec9b0; }
+        .error { background: #4d1e1e; border: 1px solid #f48771; color: #f48771; }
+        .info { background: #1e2d4d; border: 1px solid #9cdcfe; color: #9cdcfe; }
+        pre { background: #1e1e1e; border: 1px solid #3e3e42; padding: 12px; border-radius: 4px; overflow-x: auto; font-size: 12px; line-height: 1.4; margin: 10px 0; }
+        table { width: 100%; border-collapse: collapse; margin: 10px 0; }
+        th, td { border: 1px solid #3e3e42; padding: 10px; text-align: right; }
+        th { background: #2d2d30; color: #4ec9b0; font-weight: bold; }
+        tr:nth-child(even) { background: #252526; }
+        tr:hover { background: #2d2d30; }
+        .loading { text-align: center; padding: 40px; }
+        .spinner { border: 4px solid #3e3e42; border-top: 4px solid #4ec9b0; border-radius: 50%; width: 40px; height: 40px; animation: spin 0.8s linear infinite; margin: 0 auto; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .column { background: #2d2d30; padding: 8px; margin: 5px; border-radius: 3px; display: inline-block; border: 1px solid #4ec9b0; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>🔍 تشخيص قاعدة البيانات - Diagnostic Tool</h1>
+    
+    <div id="content">
+        <div class="loading">
+            <div class="spinner"></div>
+            <p style="margin-top: 20px;">جاري الاتصال بـ Supabase...</p>
+        </div>
+    </div>
+</div>
+
+<script>
+    const API_URL = 'https://acxceakcjinxlntwnjrs.supabase.co/rest/v1';
+    const API_KEY = 'sb_publishable_WNdDrlceoqYxSdyFrz_XTw_kVx7m1V7';
+    const TABLE = 'quran-tafsir';
+
+    async function diagnose() {
+        const content = document.getElementById('content');
+        let html = '';
+
+        try {
+            // TEST 1: CONNECTION
+            html += '<h2>✅ اختبار الاتصال</h2>';
+            html += '<div class="box success">تم الاتصال بـ Supabase بنجاح</div>';
+
+            // TEST 2: TABLE EXISTENCE
+            html += '<h2>🔎 البحث عن الجدول</h2>';
+            const checkUrl = `${API_URL}/${TABLE}?select=id&limit=1`;
+            const checkRes = await fetch(checkUrl, {
+                headers: {
+                    'apikey': API_KEY,
+                    'Authorization': `Bearer ${API_KEY}`
+                }
+            });
+
+            if (checkRes.status === 404) {
+                html += `<div class="box error">❌ الجدول "${TABLE}" غير موجود (404)</div>`;
+                content.innerHTML = html;
+                return;
+            }
+
+            if (!checkRes.ok) {
+                html += `<div class="box error">❌ خطأ HTTP ${checkRes.status}: ${checkRes.statusText}</div>`;
+                content.innerHTML = html;
+                return;
+            }
+
+            html += `<div class="box success">✅ الجدول "${TABLE}" موجود</div>`;
+
+            // TEST 3: LOAD ALL DATA
+            html += '<h2>📊 تحميل البيانات</h2>';
+            const dataUrl = `${API_URL}/${TABLE}?select=*&limit=100`;
+            const dataRes = await fetch(dataUrl, {
+                headers: {
+                    'apikey': API_KEY,
+                    'Authorization': `Bearer ${API_KEY}`
+                }
+            });
+
+            if (!dataRes.ok) {
+                html += `<div class="box error">❌ خطأ تحميل البيانات: ${dataRes.statusText}</div>`;
+                content.innerHTML = html;
+                return;
+            }
+
+            const data = await dataRes.json();
+
+            if (!Array.isArray(data)) {
+                html += `<div class="box error">❌ البيانات ليست مصفوفة JSON!</div>`;
+                html += `<pre>${JSON.stringify(data, null, 2).substring(0, 500)}</pre>`;
+                content.innerHTML = html;
+                return;
+            }
+
+            if (data.length === 0) {
+                html += `<div class="box error">❌ الجدول فارغ (لا توجد بيانات)</div>`;
+                content.innerHTML = html;
+                return;
+            }
+
+            html += `<div class="box success">✅ تم تحميل ${data.length} سجل</div>`;
+
+            // TEST 4: TABLE STRUCTURE
+            html += '<h2>📋 هيكل الجدول (الأعمدة)</h2>';
+            const firstRow = data[0];
+            const columns = Object.keys(firstRow);
+            html += '<div class="box info">';
+            columns.forEach(col => {
+                html += `<span class="column">${col}</span> `;
+            });
+            html += '</div>';
+
+            // TEST 5: SAMPLE DATA
+            html += '<h2>📝 عينة من البيانات (أول 5 سجلات)</h2>';
+            html += '<table>';
+            html += '<tr>';
+            columns.forEach(col => {
+                html += `<th>${col}</th>`;
+            });
+            html += '</tr>';
+
+            data.slice(0, 5).forEach(row => {
+                html += '<tr>';
+                columns.forEach(col => {
+                    let val = row[col];
+                    if (val === null) val = '<span style="color: #888; font-style: italic;">null</span>';
+                    else if (typeof val === 'object') val = JSON.stringify(val);
+                    else val = String(val).substring(0, 100);
+                    html += `<td>${val}</td>`;
+                });
+                html += '</tr>';
+            });
+
+            html += '</table>';
+
+            // TEST 6: CRITICAL FIELDS
+            html += '<h2>🎯 التحقق من الأعمدة الأساسية</h2>';
+            const requiredFields = ['page_mushaf', 'text_uthmani', 'ayah_number', 'surah_number', 'name_arabic'];
+            let allGood = true;
+
+            requiredFields.forEach(field => {
+                const exists = columns.includes(field);
+                const hasData = exists && data.some(row => row[field] !== null && row[field] !== '');
+                
+                if (exists && hasData) {
+                    html += `<div class="box success">✅ ${field} - موجود بيانات</div>`;
+                } else if (exists) {
+                    html += `<div class="box error">⚠️ ${field} - موجود لكن فارغ</div>`;
+                    allGood = false;
+                } else {
+                    html += `<div class="box error">❌ ${field} - غير موجود</div>`;
+                    allGood = false;
+                }
+            });
+
+            // TEST 7: PAGE DISTRIBUTION
+            if (columns.includes('page_mushaf')) {
+                html += '<h2>📖 توزيع الصفحات</h2>';
+                const pages = new Set(data.map(r => r.page_mushaf));
+                const pageArray = Array.from(pages).sort((a, b) => a - b);
+                html += `<div class="box info">الصفحات الموجودة: ${pageArray.length} صفحة</div>`;
+                html += `<pre>Min: ${Math.min(...pageArray)}, Max: ${Math.max(...pageArray)}\nSample: ${pageArray.slice(0, 20).join(', ')}</pre>`;
+            }
+
+            // FINAL VERDICT
+            html += '<h2>🏁 الخلاصة</h2>';
+            if (allGood) {
+                html += '<div class="box success"><strong>✅ كل شيء يبدو جيدًا!</strong> يمكنك استخدام quran.html</div>';
+            } else {
+                html += '<div class="box error"><strong>⚠️ هناك مشاكل في البيانات.</strong> تحقق من الأعمدة أعلاه.</div>';
+            }
+
+            content.innerHTML = html;
+
+        } catch (error) {
+            html = '<div class="box error"><h2>❌ حدث خطأ</h2>';
+            html += `<pre>${error.message}\n\n${error.stack}</pre>`;
+            html += '</div>';
+            content.innerHTML = html;
+        }
+    }
+
+    diagnose();
+</script>
+
+</body>
+</html>

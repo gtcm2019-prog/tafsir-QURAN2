@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>المصحف - البحث عن الجدول</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            height: 100%;
+            font-family: Arial, sans-serif;
+            direction: rtl;
+            background: #faf6f0;
+            color: #1a1a1a;
+        }
+
+        body {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            max-width: 600px;
+            width: 100%;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+            color: #6b4423;
+        }
+
+        .subtitle {
+            font-size: 14px;
+            color: #999;
+            margin-bottom: 30px;
+            line-height: 1.6;
+        }
+
+        .loading {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .spinner {
+            border: 4px solid #faf6f0;
+            border-top-color: #d4af37;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .tables-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .table-btn {
+            background: #faf6f0;
+            border: 2px solid #d4af37;
+            padding: 15px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            color: #6b4423;
+            transition: all 0.3s;
+        }
+
+        .table-btn:hover {
+            background: #d4af37;
+            color: white;
+            transform: translateY(-2px);
+        }
+
+        .error {
+            background: #fee5e5;
+            border: 2px solid #f88;
+            color: #c33;
+            padding: 20px;
+            border-radius: 6px;
+            margin-top: 20px;
+            line-height: 1.6;
+        }
+
+        .manual-input {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 2px dashed #d4af37;
+        }
+
+        .manual-input input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #d4af37;
+            border-radius: 4px;
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
+
+        .manual-input button {
+            width: 100%;
+            background: #d4af37;
+            color: #6b4423;
+            border: none;
+            padding: 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .manual-input button:hover {
+            background: #e5c158;
+            transform: translateY(-2px);
+        }
+
+        .success {
+            background: #e5f5e5;
+            border: 2px solid #8f8;
+            color: #3a3;
+            padding: 20px;
+            border-radius: 6px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>📖 المصحف الشريف</h1>
+    <div class="subtitle">جاري البحث عن قاعدة البيانات...</div>
+    
+    <div id="content" class="loading">
+        <div class="spinner"></div>
+        <div>يرجى الانتظار...</div>
+    </div>
+</div>
+
+<script>
+    const API_URL = 'https://acxceakcjinxlntwnjrs.supabase.co/rest/v1';
+    const API_KEY = 'sb_publishable_WNdDrlceoqYxSdyFrz_XTw_kVx7m1V7';
+    
+    const POSSIBLE_TABLES = [
+        'quran',
+        'verses',
+        'ayahs', 
+        'quran_verses',
+        'quranic_text',
+        'quran_data',
+        'holy_quran',
+        'mushaf',
+        'quran_surah',
+        'ayat',
+        'quran_ayat',
+        'text',
+        'verses_text',
+        'quran_text'
+    ];
+
+    async function detectTable() {
+        const content = document.getElementById('content');
+        
+        console.log('🔍 جاري البحث عن الجداول...');
+        
+        const foundTables = [];
+        
+        for (let tableName of POSSIBLE_TABLES) {
+            try {
+                const url = `${API_URL}/${tableName}?select=id&limit=1`;
+                const response = await fetch(url, {
+                    headers: {
+                        'apikey': API_KEY,
+                        'Authorization': `Bearer ${API_KEY}`
+                    }
+                });
+                
+                if (response.status === 200) {
+                    const data = await response.json();
+                    if (Array.isArray(data) && data.length > 0) {
+                        foundTables.push(tableName);
+                        console.log(`✅ وجدت جدول: ${tableName}`);
+                    }
+                }
+            } catch (error) {
+                console.log(`❌ ${tableName} غير متاح`);
+            }
+        }
+        
+        if (foundTables.length > 0) {
+            showTableOptions(foundTables);
+        } else {
+            showError('لم أتمكن من العثور على أي جداول. الرجاء إدخال اسم الجدول يدويًا.');
+        }
+    }
+
+    function showTableOptions(tables) {
+        const content = document.getElementById('content');
+        let html = '<div class="tables-list">';
+        
+        for (let table of tables) {
+            html += `
+                <button class="table-btn" onclick="selectTable('${table}')">
+                    اختر: <strong>${table}</strong>
+                </button>
+            `;
+        }
+        
+        html += '</div>';
+        
+        html += `
+            <div class="manual-input">
+                <input type="text" id="manualTable" placeholder="أو أدخل اسم الجدول يدويًا">
+                <button onclick="selectTable(document.getElementById('manualTable').value)">
+                    جرّب هذا الجدول
+                </button>
+            </div>
+        `;
+        
+        content.innerHTML = html;
+    }
+
+    function showError(msg) {
+        const content = document.getElementById('content');
+        content.innerHTML = `
+            <div class="error">
+                <strong>❌ خطأ</strong><br>
+                ${msg}
+            </div>
+            <div class="manual-input">
+                <input type="text" id="manualTable" placeholder="أدخل اسم الجدول">
+                <button onclick="selectTable(document.getElementById('manualTable').value)">
+                    جرّب هذا الجدول
+                </button>
+            </div>
+        `;
+    }
+
+    async function selectTable(tableName) {
+        if (!tableName || tableName.trim() === '') {
+            alert('الرجاء إدخال اسم الجدول');
+            return;
+        }
+
+        const content = document.getElementById('content');
+        content.innerHTML = '<div class="loading"><div class="spinner"></div><div>جاري الاختبار...</div></div>';
+
+        try {
+            const url = `${API_URL}/${tableName}?select=*&limit=1`;
+            const response = await fetch(url, {
+                headers: {
+                    'apikey': API_KEY,
+                    'Authorization': `Bearer ${API_KEY}`
+                }
+            });
+
+            if (response.status === 404) {
+                showError(`الجدول "<strong>${tableName}</strong>" غير موجود. تحقق من الاسم.`);
+                return;
+            }
+
+            if (!response.ok) {
+                throw new Error(`خطأ ${response.status}`);
+            }
+
+            const data = await response.json();
+            
+            if (!Array.isArray(data) || data.length === 0) {
+                showError(`الجدول "<strong>${tableName}</strong>" فارغ أو لا يحتوي بيانات.`);
+                return;
+            }
+
+            // ✅ وجدنا الجدول! الآن نعيد توجيه إلى تطبيق المصحف
+            createAndRedirect(tableName);
+
+        } catch (error) {
+            showError(`خطأ: ${error.message}`);
+        }
+    }
+
+    function createAndRedirect(tableName) {
+        const htmlContent = `<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>المصحف الشريف - 604 صفحة</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body { height: 100%; font-family: 'Traditional Arabic', Arial; direction: rtl; background: #faf6f0; }
+        body { display: flex; flex-direction: column; overflow: hidden; }
+        .header { background: linear-gradient(135deg, #6b4423, #4a2f1a); color: #faf6f0; padding: 20px; border-bottom: 4px solid #d4af37; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
+        .header-inner { max-width: 1600px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; gap: 20px; }
+        .header h1 { font-size: 32px; font-weight: 300; letter-spacing: 2px; }
+        .controls { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+        button { background: #d4af37; color: #6b4423; border: none; padding: 10px 18px; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 14px; transition: all 0.3s; }
+        button:hover:not(:disabled) { background: #e5c158; transform: translateY(-2px); }
+        button:disabled { opacity: 0.4; cursor: not-allowed; }
+        input[type="number"] { width: 70px; padding: 10px; border: 2px solid #d4af37; border-radius: 4px; font-size: 14px; text-align: center; }
+        .page-info { background: rgba(255,255,255,0.1); padding: 10px 18px; border-radius: 4px; min-width: 150px; text-align: center; font-size: 14px; border: 1px solid rgba(255,255,255,0.2); }
+        .main { flex: 1; display: flex; overflow: hidden; gap: 20px; padding: 20px; max-width: 1600px; margin: 0 auto; width: 100%; }
+        .sidebar { width: 260px; background: white; border: 2px solid #d4af37; border-radius: 6px; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        .sidebar-title { background: linear-gradient(135deg, #6b4423, #4a2f1a); color: white; padding: 15px; font-weight: 600; border-bottom: 2px solid #d4af37; }
+        .sidebar-list { flex: 1; overflow-y: auto; padding: 10px; }
+        .surah-btn { display: block; width: 100%; text-align: right; padding: 12px; margin: 5px 0; background: #faf6f0; border: none; border-right: 4px solid transparent; cursor: pointer; border-radius: 4px; transition: all 0.25s; font-size: 13px; line-height: 1.5; }
+        .surah-btn:hover { background: #efe9dd; border-right-color: #d4af37; padding-right: 16px; }
+        .surah-btn.active { background: #d4af37; color: #6b4423; font-weight: 600; border-right-color: #6b4423; padding-right: 16px; }
+        .content { flex: 1; background: white; border: 2px solid #d4af37; border-radius: 6px; padding: 40px 35px; overflow-y: auto; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        .loading { display: flex; align-items: center; justify-content: center; height: 100%; font-size: 18px; color: #6b4423; gap: 15px; }
+        .spinner { border: 4px solid #faf6f0; border-top-color: #d4af37; border-radius: 50%; width: 40px; height: 40px; animation: spin 0.8s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .error { background: #fee5e5; border: 2px solid #f88; color: #c33; padding: 25px; border-radius: 6px; text-align: center; font-size: 16px; }
+        .page-header { text-align: center; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 3px double #d4af37; }
+        .surah-name { font-size: 28px; color: #6b4423; margin-bottom: 10px; font-weight: 500; }
+        .page-meta { font-size: 13px; color: #999; display: flex; justify-content: center; gap: 20px; }
+        .verses { display: flex; flex-direction: column; gap: 15px; }
+        .verse { padding: 10px 0; border-bottom: 1px dotted #e0d5c7; }
+        .verse:last-child { border-bottom: none; }
+        .verse-text { font-size: 24px; line-height: 2.2; text-align: justify; word-spacing: 0.1em; }
+        .verse-num { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; background: radial-gradient(circle, #e5c158, #d4af37); color: #6b4423; border-radius: 50%; font-size: 12px; font-weight: 700; margin: 0 6px; vertical-align: middle; box-shadow: inset 0 1px 2px rgba(255,255,255,0.3), 0 2px 4px rgba(0,0,0,0.2); }
+        .page-footer { text-align: center; margin-top: 35px; padding-top: 20px; border-top: 3px double #d4af37; font-size: 16px; color: #6b4423; font-weight: 600; letter-spacing: 1px; }
+        @media (max-width: 1024px) { .main { flex-direction: column; gap: 10px; } .sidebar { width: 100%; max-height: 120px; } .sidebar-list { display: flex; overflow-x: auto; } .surah-btn { white-space: nowrap; flex-shrink: 0; } .content { padding: 25px 20px; } .verse-text { font-size: 20px; } }
+        @media (max-width: 768px) { .header h1 { font-size: 24px; } .controls { width: 100%; justify-content: center; } .content { padding: 20px 15px; } .verse-text { font-size: 18px; line-height: 2; } .surah-name { font-size: 22px; } }
+        @media (max-width: 480px) { .header { padding: 12px 15px; } .header h1 { font-size: 20px; } .controls { flex-direction: column; width: 100%; } button, input { width: 100%; } .content { padding: 15px 10px; } .verse-text { font-size: 16px; } }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <div class="header-inner">
+        <h1>📖 المصحف الشريف</h1>
+        <div class="controls">
+            <button id="prevBtn" onclick="goPage(currentPage - 1)">← سابق</button>
+            <input type="number" id="pageNum" min="1" max="604" placeholder="ص" onkeypress="if(event.key==='Enter') goPage(parseInt(this.value))">
+            <button id="goBtn" onclick="goPage(parseInt(document.getElementById('pageNum').value))">اذهب</button>
+            <button id="nextBtn" onclick="goPage(currentPage + 1)">التالي →</button>
+            <div class="page-info">
+                <span id="pageDisplay">الصفحة 1 / 604</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="main">
+    <div class="sidebar">
+        <div class="sidebar-title">☰ السور</div>
+        <div class="sidebar-list" id="surahList"></div>
+    </div>
+
+    <div class="content" id="content">
+        <div class="loading">
+            <div class="spinner"></div>
+            <div>جاري التحميل...</div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const API_URL = 'https://acxceakcjinxlntwnjrs.supabase.co/rest/v1';
+    const API_KEY = 'sb_publishable_WNdDrlceoqYxSdyFrz_XTw_kVx7m1V7';
+    const TABLE = '${tableName}';
+    
+    let currentPage = 1;
+    let allVerses = [];
+    let surahs = [];
+
+    async function init() {
+        try {
+            console.log('📡 جاري تحميل البيانات من جدول: ' + TABLE);
+            await loadData();
+            extractSurahs();
+            renderSurahs();
+            renderPage(1);
+        } catch (error) {
+            showError('خطأ: ' + error.message);
+        }
+    }
+
+    async function loadData() {
+        const url = API_URL + '/' + TABLE + '?select=*&order=id';
+        
+        const response = await fetch(url, {
+            headers: {
+                'apikey': API_KEY,
+                'Authorization': 'Bearer ' + API_KEY,
+                'Content-Type': 'application/json'
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error('HTTP ' + response.status + ': ' + response.statusText);
+        }
+
+        const data = await response.json();
+        if (!Array.isArray(data) || data.length === 0) {
+            throw new Error('لا توجد بيانات');
+        }
+
+        allVerses = data;
+        console.log('✅ تم تحميل ' + allVerses.length + ' آية');
+    }
+
+    function extractSurahs() {
+        const map = new Map();
+        
+        allVerses.forEach(v => {
+            if (v.surah_number && !map.has(v.surah_number)) {
+                map.set(v.surah_number, {
+                    num: v.surah_number,
+                    name: v.name_arabic || 'سورة',
+                    page: v.page_mushaf || 1
+                });
+            }
+        });
+
+        surahs = Array.from(map.values()).sort((a, b) => a.num - b.num);
+    }
+
+    function renderSurahs() {
+        const list = document.getElementById('surahList');
+        list.innerHTML = surahs.map(s => 
+            '<button class="surah-btn" data-page="' + s.page + '" onclick="goPage(' + s.page + '); event.target.classList.add(\\'active\\');">' +
+                s.name + '<br><small>ص ' + s.page + '</small>' +
+            '</button>'
+        ).join('');
+    }
+
+    function renderPage(pageNum) {
+        if (pageNum < 1 || pageNum > 604) return;
+
+        currentPage = pageNum;
+        const verses = allVerses.filter(v => v.page_mushaf === pageNum);
+
+        if (verses.length === 0) {
+            document.getElementById('content').innerHTML = '<div class="error">❌ لا توجد بيانات لهذه الصفحة</div>';
+            updateUI();
+            return;
+        }
+
+        const surah = verses[0].name_arabic || 'سورة';
+        const juz = verses[0].juz || '-';
+        const hizb = verses[0].hizb || '-';
+
+        let html = '<div class="page-header"><div class="surah-name">' + surah + '</div><div class="page-meta"><span>جزء ' + juz + '</span><span>حزب ' + hizb + '</span></div></div><div class="verses">';
+
+        verses.forEach(v => {
+            html += '<div class="verse"><span class="verse-text">' + (v.text_uthmani || '') + '<span class="verse-num">' + (v.ayah_number || '') + '</span></span></div>';
+        });
+
+        html += '</div><div class="page-footer">❖ صفحة ' + pageNum + ' ❖</div>';
+
+        document.getElementById('content').innerHTML = html;
+        updateUI();
+    }
+
+    function updateUI() {
+        document.getElementById('pageDisplay').textContent = 'الصفحة ' + currentPage + ' / 604';
+        document.getElementById('pageNum').value = currentPage;
+        document.getElementById('prevBtn').disabled = currentPage === 1;
+        document.getElementById('nextBtn').disabled = currentPage === 604;
+    }
+
+    function goPage(page) {
+        if (page >= 1 && page <= 604) {
+            renderPage(page);
+        }
+    }
+
+    function showError(msg) {
+        document.getElementById('content').innerHTML = '<div class="error">' + msg + '</div>';
+    }
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowRight') goPage(currentPage - 1);
+        if (e.key === 'ArrowLeft') goPage(currentPage + 1);
+    });
+
+    init();
+</script>
+
+</body>
+</html>`;
+
+        // Créer un blob et télécharger
+        const blob = new Blob([htmlContent], { type: 'text/html' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'quran-mushaf.html';
+        a.click();
+
+        // Afficher un message de succès
+        const content = document.getElementById('content');
+        content.innerHTML = `
+            <div class="success">
+                <h2>✅ وجدت الجدول!</h2>
+                <p style="margin: 15px 0;">
+                    اسم الجدول: <strong>${tableName}</strong>
+                </p>
+                <p>تم تحميل ملف <strong>quran-mushaf.html</strong></p>
+                <p style="margin-top: 15px; font-size: 14px;">افتح الملف في المتصفح لعرض المصحف بـ 604 صفحة</p>
+            </div>
+        `;
+    }
+
+    // بدء البحث
+    window.addEventListener('load', () => {
+        detectTable();
+    });
+</script>
+
+</body>
+</html>

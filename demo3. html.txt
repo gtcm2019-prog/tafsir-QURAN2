@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>QCF4 Interactive Mushaf</title>
+
+<style>
+/* ───────────── BEIGE THEME ───────────── */
+body {
+  margin: 0;
+  background: #f4ecd8;
+  color: #000;
+  font-family: "Noto Naskh Arabic", serif;
+}
+
+/* ───────────── TOP BAR ───────────── */
+.controls {
+  position: sticky;
+  top: 0;
+  background: #efe3c2;
+  padding: 12px;
+  text-align: center;
+  border-bottom: 1px solid #d6c6a5;
+}
+
+select {
+  padding: 6px 10px;
+  font-family: monospace;
+  border: 1px solid #c8b58f;
+  border-radius: 6px;
+  background: #fff;
+  cursor: pointer;
+}
+
+/* ───────────── PAGE ───────────── */
+#page-render {
+  padding: 50px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+/* line */
+.mushaf-line {
+  display: flex;
+  direction: rtl;
+  justify-content: center;
+  width: 100%;
+}
+
+/* word */
+.mushaf-word {
+  padding: 0 2px;
+  font-size: 32px;
+  line-height: 2;
+  color: #000;
+  cursor: pointer;
+  transition: 0.15s;
+}
+
+/* hover */
+.mushaf-word:hover {
+  color: #b38b2a;
+  background: rgba(179,139,42,0.08);
+  border-radius: 3px;
+}
+
+/* highlight */
+.highlight {
+  background: rgba(179,139,42,0.25);
+  border-radius: 4px;
+}
+
+/* ───────────── POPUP ───────────── */
+.popup {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #fff7e0;
+  border: 1px solid #c8b58f;
+  padding: 12px 16px;
+  border-radius: 10px;
+  font-family: monospace;
+  font-size: 14px;
+  max-width: 80%;
+  display: none;
+  white-space: pre-line;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+}
+</style>
+</head>
+
+<body>
+
+<!-- 🎛 PAGE SELECT -->
+<div class="controls">
+  Page:
+  <select id="page-select"></select>
+</div>
+
+<!-- 📖 RENDER AREA -->
+<div id="page-render"></div>
+
+<!-- 🧠 POPUP -->
+<div id="popup" class="popup"></div>
+
+<script>
+
+/* ───────────── SOURCES ───────────── */
+const CDN_DATA  = "https://raw.githubusercontent.com/MohamadHajjRabee/quran-qcf4/main";
+const CDN_FONTS = "https://cdn.jsdelivr.net/gh/MohamadHajjRabee/quran-qcf4@main";
+
+const loadedFonts = new Set();
+
+/* ───────────── FONT LOADER ───────────── */
+async function loadFont(fontName) {
+  if (loadedFonts.has(fontName)) return;
+
+  const file = fontName === "QCF4_QBSML"
+    ? `${fontName}.woff2`
+    : `${fontName}_W.woff2`;
+
+  const url = `${CDN_FONTS}/fonts-woff2/${file}`;
+
+  const ff = new FontFace(fontName, `url(${url})`);
+  await ff.load();
+  document.fonts.add(ff);
+
+  loadedFonts.add(fontName);
+}
+
+/* ───────────── POPUP ───────────── */
+function showPopup(text) {
+  const popup = document.getElementById("popup");
+  popup.textContent = text;
+  popup.style.display = "block";
+
+  setTimeout(() => {
+    popup.style.display = "none";
+  }, 3000);
+}
+
+/* ───────────── LOAD PAGE ───────────── */
+async function loadPage(page) {
+  const padded = String(page).padStart(3, "0");
+
+  const res = await fetch(`${CDN_DATA}/pages/${padded}.json`);
+  const data = await res.json();
+
+  renderPage(data);
+}
+
+/* ───────────── RENDER ───────────── */
+async function renderPage(data) {
+  const container = document.getElementById("page-render");
+  container.innerHTML = "";
+
+  const fonts = new Set();
+  fonts.add(data.font);
+
+  data.lines.forEach(line => {
+    line.words.forEach(word => fonts.add(word.font));
+  });
+
+  await Promise.all([...fonts].map(loadFont));
+
+  data.lines.forEach(line => {
+    const row = document.createElement("div");
+    row.className = "mushaf-line";
+
+    line.words.forEach(word => {
+      const span = document.createElement("span");
+      span.className = "mushaf-word";
+      span.textContent = word.char;
+      span.style.fontFamily = word.font;
+
+      /* 🧠 CLICK EVENT */
+      span.addEventListener("click", () => {
+
+        // remove old highlight
+        document.querySelectorAll(".highlight")
+          .forEach(e => e.classList.remove("highlight"));
+
+        // highlight clicked word
+        span.classList.add("highlight");
+
+        // show meaning from JSON
+        if (word.text) {
+          showPopup(
+`📖 Mot: ${word.char}
+🧠 Sens: ${word.text}`
+          );
+        } else {
+          showPopup("❌ Aucun sens disponible");
+        }
+      });
+
+      row.appendChild(span);
+    });
+
+    container.appendChild(row);
+  });
+}
+
+/* ───────────── SELECT 1→604 ───────────── */
+const sel = document.getElementById("page-select");
+
+for (let i = 1; i <= 604; i++) {
+  const opt = document.createElement("option");
+  opt.value = i;
+  opt.textContent = String(i).padStart(3, "0");
+  sel.appendChild(opt);
+}
+
+sel.addEventListener("change", () => {
+  loadPage(sel.value);
+});
+
+/* ───────────── START ───────────── */
+loadPage(1);
+
+</script>
+
+</body>
+</html>

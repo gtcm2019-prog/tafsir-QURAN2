@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>مصحف المدينة QCF4</title>
+  <style>
+    :root {
+      --bg: #0d1117;
+      --surface: #161b22;
+      --border: #2a3040;
+      --gold: #c9a84c;
+      --text: #e8dfc8;
+    }
+    
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Arial Unicode MS', 'Noto Naskh Arabic', serif;
+      min-height: 100vh;
+      padding: 20px;
+      direction: rtl;
+    }
+    
+    .header {
+      max-width: 1000px;
+      margin: 0 auto 30px;
+      text-align: center;
+      padding: 20px;
+      border-bottom: 1px solid var(--border);
+    }
+    
+    h1 { color: var(--gold); font-size: 2.5em; margin-bottom: 10px; }
+    
+    .controls {
+      max-width: 1000px;
+      margin: 0 auto 30px;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      direction: ltr;
+    }
+    
+    label { color: var(--text); font-size: 14px; }
+    
+    input[type="number"] {
+      padding: 8px 12px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 4px;
+      font-size: 14px;
+      width: 100px;
+    }
+    
+    button {
+      padding: 8px 20px;
+      background: var(--gold);
+      color: var(--bg);
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: bold;
+      font-size: 14px;
+    }
+    
+    button:hover { opacity: 0.9; }
+    
+    .container {
+      max-width: 1000px;
+      margin: 0 auto;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 40px;
+      min-height: 500px;
+    }
+    
+    .page-info {
+      text-align: center;
+      margin-bottom: 30px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid var(--border);
+      color: var(--gold);
+    }
+    
+    #content {
+      font-size: 24px;
+      line-height: 2.4;
+      text-align: right;
+      word-spacing: 0.2em;
+    }
+    
+    .verse-marker {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px;
+      height: 32px;
+      min-width: 32px;
+      border-radius: 50%;
+      border: 2px solid var(--gold);
+      background: rgba(201, 168, 76, 0.1);
+      color: var(--gold);
+      font-size: 12px;
+      margin: 0 2px;
+      font-weight: bold;
+    }
+    
+    .error {
+      color: #ff5f57;
+      text-align: center;
+      padding: 20px;
+    }
+    
+    .loading {
+      text-align: center;
+      padding: 40px;
+      color: var(--gold);
+    }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <h1>مُصْحَف المَدِينَة</h1>
+  <p style="color: #8b7d60; font-size: 12px;">QCF4 Hafs - Madinah Mushaf 1441 AH</p>
+</div>
+
+<div class="controls">
+  <label for="pageNum">Page:</label>
+  <input type="number" id="pageNum" min="1" max="604" value="562">
+  <button onclick="loadPage()">Load</button>
+  <span id="status" style="margin-left: 20px; color: #8b7d60;"></span>
+</div>
+
+<div class="container">
+  <div class="page-info" id="pageInfo">—</div>
+  <div id="content"></div>
+</div>
+
+<script>
+// Configuration
+const PAGES_PATH = 'pages/';
+
+async function loadPage() {
+  const pageNum = parseInt(document.getElementById('pageNum').value);
+  const content = document.getElementById('content');
+  const pageInfo = document.getElementById('pageInfo');
+  const status = document.getElementById('status');
+  
+  if (pageNum < 1 || pageNum > 604) {
+    content.innerHTML = '<div class="error">❌ Page must be between 1 and 604</div>';
+    return;
+  }
+  
+  content.innerHTML = '<div class="loading">Loading page ' + String(pageNum).padStart(3, '0') + '...</div>';
+  status.textContent = 'Loading...';
+  
+  try {
+    // Construct the path - try multiple possible locations
+    const paths = [
+      `${PAGES_PATH}${String(pageNum).padStart(3, '0')}.json`,
+      `pages/${String(pageNum).padStart(3, '0')}.json`,
+      `./pages/${String(pageNum).padStart(3, '0')}.json`
+    ];
+    
+    let data = null;
+    let lastError = null;
+    
+    for (const path of paths) {
+      try {
+        const response = await fetch(path);
+        if (response.ok) {
+          data = await response.json();
+          break;
+        }
+      } catch (e) {
+        lastError = e;
+      }
+    }
+    
+    if (!data) {
+      throw new Error(`Could not load page data. Make sure you have a "pages" folder with JSON files.`);
+    }
+    
+    // Clear content
+    content.innerHTML = '';
+    
+    // Add page info
+    const surahInfo = data.surahs && data.surahs[0] 
+      ? `${data.surahs[0].name_arabic} (${data.surahs[0].name})` 
+      : '—';
+    pageInfo.textContent = `Page ${String(pageNum).padStart(3, '0')} · ${surahInfo}`;
+    
+    // Render lines
+    let wordCount = 0;
+    data.lines.forEach(line => {
+      const lineDiv = document.createElement('div');
+      lineDiv.style.marginBottom = '12px';
+      lineDiv.style.textAlign = 'right';
+      
+      line.words.forEach(word => {
+        // Skip header and special types for now, just show the text
+        if (word.type === 'surah_header') {
+          const headerSpan = document.createElement('div');
+          headerSpan.textContent = word.text;
+          headerSpan.style.color = '#c9a84c';
+          headerSpan.style.fontWeight = 'bold';
+          headerSpan.style.margin = '20px 0';
+          headerSpan.style.textAlign = 'center';
+          content.appendChild(headerSpan);
+        } else if (word.type === 'bismillah') {
+          const bismDiv = document.createElement('div');
+          bismDiv.textContent = word.text;
+          bismDiv.style.color = '#c9a84c';
+          bismDiv.style.margin = '10px 0';
+          bismDiv.style.textAlign = 'center';
+          content.appendChild(bismDiv);
+        } else if (word.type === 'word' || word.type === 'end') {
+          const span = document.createElement('span');
+          
+          if (word.type === 'end') {
+            // Verse number marker
+            span.className = 'verse-marker';
+            const verseNum = word.verse_key ? word.verse_key.split(':')[1] : '?';
+            span.textContent = verseNum;
+          } else {
+            // Regular word
+            span.textContent = word.text + ' ';
+            span.style.whiteSpace = 'normal';
+          }
+          
+          lineDiv.appendChild(span);
+          wordCount++;
+        }
+      });
+      
+      if (lineDiv.children.length > 0) {
+        content.appendChild(lineDiv);
+      }
+    });
+    
+    status.textContent = `✓ Loaded (${data.lines.length} lines, ${wordCount} words)`;
+    
+  } catch (error) {
+    console.error('Error:', error);
+    content.innerHTML = `<div class="error">
+      ❌ Error: ${error.message}
+      <br><br>
+      <small>Make sure the "pages" folder with JSON files is in the same folder as this HTML file.</small>
+    </div>`;
+    status.textContent = 'Error loading page';
+  }
+}
+
+// Load page 562 on start
+window.onload = () => {
+  document.getElementById('pageNum').value = 562;
+  loadPage();
+};
+</script>
+
+</body>
+</html>

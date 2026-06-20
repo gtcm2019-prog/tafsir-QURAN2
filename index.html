@@ -103,10 +103,49 @@
         .page-wrapper {
             background: #d9d9d9;
             margin: 0 auto;
-            max-width: 630px;
+            max-width: 900px;
             padding: 15px;
             box-shadow: 0 5px 20px rgba(0,0,0,0.4);
             position: relative;
+        }
+
+        @media (max-width: 768px) {
+            .page-wrapper {
+                max-width: 95%;
+                padding: 10px;
+            }
+            
+            .page {
+                padding: 30px 20px;
+                min-height: auto;
+            }
+            
+            .line {
+                font-size: 26px;
+                line-height: 3.2;
+                margin-bottom: 8px;
+            }
+            
+            .page-header {
+                margin-bottom: 20px;
+                padding-bottom: 15px;
+            }
+            
+            .page-footer {
+                font-size: 12px;
+                padding: 0 20px;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .line {
+                font-size: 24px;
+                line-height: 3;
+            }
+            
+            .page {
+                padding: 25px 15px;
+            }
         }
 
         .page {

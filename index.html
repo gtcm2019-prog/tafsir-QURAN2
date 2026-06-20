@@ -397,9 +397,13 @@
                 `;
             }
             
-            // Charger les fonts dynamiquement
+            // Rendre les lignes
+            let lastVerseKey = null;
+            
+            // Déclarer et collecter les fonts AVANT de les utiliser
             const fonts = new Set();
             fonts.add(fontName);
+            
             if (pageData.lines) {
                 pageData.lines.forEach(line => {
                     if (line.words) {
@@ -410,29 +414,40 @@
                 });
             }
             
-            // Ajouter @font-face pour chaque font
+            // Ajouter @font-face pour chaque font - PRIORITÉ TTF LOCAL
             let fontFaces = '<style>';
             fonts.forEach(font => {
                 fontFaces += `
                     @font-face {
                         font-family: '${font}';
-                        src: url('./fonts-woff2/${font}_W.woff2') format('woff2');
-                        font-display: swap;
+                        src: url('fonts/${font}_W') format('truetype'),
+                             url('fonts/${font}_W.ttf') format('truetype'),
+                             url('fonts-woff2/${font}_W.woff2') format('woff2');
+                        font-display: fallback;
                     }
                 `;
             });
             fontFaces += '</style>';
             
-            // Ajouter au début de la page
+            // Ajouter au document HEAD
             if (!document.getElementById('dynamic-fonts')) {
                 const style = document.createElement('style');
                 style.id = 'dynamic-fonts';
                 style.innerHTML = fontFaces;
                 document.head.appendChild(style);
+                
+                console.log('📝 CSS Fonts injecté');
+                console.log('🔤 Priorité: TTF local → WOFF2');
+                console.log('Chemins testés (première font):');
+                const firstFont = Array.from(fonts)[0];
+                if (firstFont) {
+                    console.log(`  1. fonts/${firstFont}_W`);
+                    console.log(`  2. fonts/${firstFont}_W.ttf`);
+                    console.log(`  3. fonts-woff2/${firstFont}_W.woff2`);
+                }
             }
             
-            // Rendre les lignes
-            let lastVerseKey = null;
+            // MAINTENANT rendre les lignes
             if (pageData.lines) {
                 pageData.lines.forEach(lineData => {
                     html += '<div class="line">';
@@ -456,10 +471,17 @@
                                 return;
                             }
                             
-                            // Rendre le mot
+                            // Rendre le mot avec la font correcte
                             const wordFont = word.font || fontName;
-                            const charCode = word.code ? String.fromCharCode(word.code) : word.char || word.text;
-                            html += `<span class="word" style="font-family: '${wordFont}';">${charCode}</span>`;
+                            const charToRender = word.char || word.text || '';
+                            
+                            if (charToRender) {
+                                // Debug: show first word of each line
+                                if (word.position === 1 && word.type === 'word') {
+                                    console.log(`Word: "${charToRender.substring(0, 5)}" | Font: ${wordFont} | Type: ${word.type}`);
+                                }
+                                html += `<span class="word" style="font-family: '${wordFont}';">${charToRender}</span>`;
+                            }
                         });
                     }
                     
